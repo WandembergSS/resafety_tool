@@ -514,9 +514,23 @@ public class ProjectDocumentDto {
         @NoArgsConstructor
         @AllArgsConstructor
         public static class Step7ModelUpdateDto {
+                @Builder.Default
+                private UpdatedStepsDto updatedSteps = UpdatedStepsDto.builder().build();
                 private List<ModelChangeDto> modelChanges;
                 private List<ValidationTaskDto> validationTasks;
                 private List<IntegrationNoteDto> integrationNotes;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class UpdatedStepsDto {
+                        private boolean step1;
+                        private boolean step2;
+                        private boolean step3;
+                        private boolean step4;
+                        private boolean step5;
+                }
 
                 @Data
                 @Builder

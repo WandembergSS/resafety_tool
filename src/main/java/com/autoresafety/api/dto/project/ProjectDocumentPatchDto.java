@@ -420,9 +420,23 @@ public class ProjectDocumentPatchDto {
         @NoArgsConstructor
         @AllArgsConstructor
         public static class Step7ModelUpdatePatchDto {
+                private UpdatedStepsPatchDto updatedSteps;
                 private List<ModelChangePatchDto> modelChanges;
                 private List<ValidationTaskPatchDto> validationTasks;
                 private List<IntegrationNotePatchDto> integrationNotes;
+
+                @JsonInclude(NON_NULL)
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class UpdatedStepsPatchDto {
+                        private Boolean step1;
+                        private Boolean step2;
+                        private Boolean step3;
+                        private Boolean step4;
+                        private Boolean step5;
+                }
 
                 @JsonInclude(NON_NULL)
                 @Data

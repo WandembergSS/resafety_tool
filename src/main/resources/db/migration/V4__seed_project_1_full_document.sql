@@ -250,6 +250,13 @@ VALUES (
       ]
     },
     "step7ModelUpdate": {
+      "updatedSteps": {
+        "step1": false,
+        "step2": false,
+        "step3": false,
+        "step4": false,
+        "step5": false
+      },
       "modelChanges": [
         {
           "id": 1,

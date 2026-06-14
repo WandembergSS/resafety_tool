@@ -21,6 +21,7 @@ import com.autoresafety.api.dto.StepFiveProjectInformationDto;
 import com.autoresafety.api.dto.StepFiveProjectUpdatePayload;
 import com.autoresafety.api.dto.StepOneProjectInformationDto;
 import com.autoresafety.api.dto.StepOneProjectUpdatePayload;
+import com.autoresafety.api.dto.StepSevenUpdatedStepsUpdatePayload;
 import com.autoresafety.api.dto.StepThreeProjectUpdatePayload;
 import com.autoresafety.api.dto.project.ProjectDocumentDto;
 import com.autoresafety.domain.Project;
@@ -116,6 +117,7 @@ public class ProjectResource {
         if (document == null) {
             return ProjectDocumentDto.builder()
                 .project(projectInfo)
+                .step7ModelUpdate(ProjectDocumentDto.Step7ModelUpdateDto.builder().build())
                 .build();
         }
 
@@ -301,6 +303,58 @@ public class ProjectResource {
         }
 
         return document.getStep6LossScenarios();
+    }
+
+    @POST
+    @Path("/step_seven_updated_steps_update")
+    @Transactional
+    public ProjectDocumentDto.Step7ModelUpdateDto updateStepSevenUpdatedSteps(
+        @Valid StepSevenUpdatedStepsUpdatePayload payload
+    ) {
+        Long projectId = payload == null ? null : payload.id();
+        if (projectId == null) {
+            throw new BadRequestException("id is required");
+        }
+
+        ProjectDocumentDto document = projectDocumentService.getByProjectId(projectId);
+        if (document == null) {
+            throw new NotFoundException();
+        }
+
+        ProjectDocumentDto.Step7ModelUpdateDto step7 = document.getStep7ModelUpdate();
+        if (step7 == null) {
+            step7 = ProjectDocumentDto.Step7ModelUpdateDto.builder().build();
+        }
+
+        ProjectDocumentDto.Step7ModelUpdateDto.UpdatedStepsDto updatedSteps = step7.getUpdatedSteps();
+        if (updatedSteps == null) {
+            updatedSteps = ProjectDocumentDto.Step7ModelUpdateDto.UpdatedStepsDto.builder().build();
+        }
+
+        StepSevenUpdatedStepsUpdatePayload.UpdatedStepsPayload requestedSteps = payload.updatedSteps();
+        if (requestedSteps != null) {
+            if (requestedSteps.step1() != null) {
+                updatedSteps.setStep1(requestedSteps.step1());
+            }
+            if (requestedSteps.step2() != null) {
+                updatedSteps.setStep2(requestedSteps.step2());
+            }
+            if (requestedSteps.step3() != null) {
+                updatedSteps.setStep3(requestedSteps.step3());
+            }
+            if (requestedSteps.step4() != null) {
+                updatedSteps.setStep4(requestedSteps.step4());
+            }
+            if (requestedSteps.step5() != null) {
+                updatedSteps.setStep5(requestedSteps.step5());
+            }
+        }
+
+        step7.setUpdatedSteps(updatedSteps);
+        document.setStep7ModelUpdate(step7);
+        projectDocumentService.saveOrUpdate(projectId, document);
+
+        return step7;
     }
 
     @GET
@@ -1034,6 +1088,20 @@ public class ProjectResource {
         project.description = payload.description();
         project.status = payload.status();
         repository.persist(project);
+
+        ProjectDocumentDto.ProjectDto projectInfo = ProjectDocumentDto.ProjectDto.builder()
+            .id(project.id)
+            .name(project.name)
+            .description(project.description)
+            .status(project.status)
+            .build();
+
+        ProjectDocumentDto document = ProjectDocumentDto.builder()
+            .project(projectInfo)
+            .build();
+
+        projectDocumentService.saveOrUpdate(project.id, document);
+
         return Response.created(URI.create("/api/projects/" + project.id)).entity(project).build();
     }
 
@@ -1081,6 +1149,7 @@ public class ProjectResource {
     @Transactional
     public Response updateMinimalStatus(@Valid ProjectStatusUpdatePayload payload) {
         Project project = repository.findByIdOptional(payload.id()).orElseThrow(NotFoundException::new);
+        ProjectStatus previousStatus = project.status;
         String requestedStatus = payload.status();
         if (requestedStatus != null && requestedStatus.equalsIgnoreCase("REMOVED")) {
             ProjectDocument.delete("project.id", project.id);
@@ -1096,6 +1165,15 @@ public class ProjectResource {
 
         ProjectDocumentDto document = projectDocumentService.getByProjectId(project.id);
         ProjectDocumentDto.ProjectDto projectInfo = document == null ? null : document.getProject();
+        if (document != null && previousStatus == ProjectStatus.COMPLETED && project.status == ProjectStatus.REOPENED) {
+            ProjectDocumentDto.Step7ModelUpdateDto step7 = document.getStep7ModelUpdate();
+            if (step7 == null) {
+                step7 = ProjectDocumentDto.Step7ModelUpdateDto.builder().build();
+                document.setStep7ModelUpdate(step7);
+            }
+            step7.setUpdatedSteps(ProjectDocumentDto.Step7ModelUpdateDto.UpdatedStepsDto.builder().build());
+        }
+
         if (projectInfo != null) {
             projectInfo.setStatus(project.status);
             projectDocumentService.saveOrUpdate(project.id, document);
@@ -1146,6 +1224,7 @@ public class ProjectResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") Long id) {
+        ProjectDocument.delete("project.id", id);
         boolean deleted = repository.deleteById(id);
         if (!deleted) {
             throw new NotFoundException();

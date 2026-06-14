@@ -345,6 +345,7 @@ public class ProjectDocumentDevSeed {
             .build();
 
         ProjectDocumentDto.Step7ModelUpdateDto step7 = ProjectDocumentDto.Step7ModelUpdateDto.builder()
+            .updatedSteps(ProjectDocumentDto.Step7ModelUpdateDto.UpdatedStepsDto.builder().build())
             .modelChanges(List.of(
                 ProjectDocumentDto.Step7ModelUpdateDto.ModelChangeDto.builder()
                     .id(1L)

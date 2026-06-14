@@ -56,6 +56,18 @@ class ProjectResourceTest extends QuarkusTestBase {
 
     given()
         .when()
+        .get(location + "/full")
+        .then()
+        .statusCode(200)
+        .body("project.name", equalTo("Demo Project"))
+        .body("step7ModelUpdate.updatedSteps.step1", equalTo(false))
+        .body("step7ModelUpdate.updatedSteps.step2", equalTo(false))
+        .body("step7ModelUpdate.updatedSteps.step3", equalTo(false))
+        .body("step7ModelUpdate.updatedSteps.step4", equalTo(false))
+        .body("step7ModelUpdate.updatedSteps.step5", equalTo(false));
+
+    given()
+        .when()
         .delete(location)
         .then()
         .statusCode(204);
@@ -246,6 +258,11 @@ class ProjectResourceTest extends QuarkusTestBase {
             .body("step4Ucas.ucas[0].category", equalTo("Not provided"))
             .body("step5ControllerConstraints.constraints[0].status", equalTo("defined"))
             .body("step6LossScenarios.safetyRequirements[0].title", equalTo("SR-1"))
+                .body("step7ModelUpdate.updatedSteps.step1", equalTo(false))
+                .body("step7ModelUpdate.updatedSteps.step2", equalTo(false))
+                .body("step7ModelUpdate.updatedSteps.step3", equalTo(false))
+                .body("step7ModelUpdate.updatedSteps.step4", equalTo(false))
+                .body("step7ModelUpdate.updatedSteps.step5", equalTo(false))
             .body("step7ModelUpdate.modelChanges[0].area", equalTo("Navigation"));
     }
 
@@ -489,6 +506,136 @@ class ProjectResourceTest extends QuarkusTestBase {
             .statusCode(200)
             .body("lossScenarios[0].uca", equalTo("UCA-1"))
             .body("safetyRequirements[0].title", equalTo("SR-1"));
+    }
+
+    @Test
+    void stepSevenUpdatedStepsUpdateEndpointPersistsFlags() {
+        long projectId = 1L;
+
+        ProjectDocumentDto document = ProjectDocumentDto.builder()
+            .project(ProjectDocumentDto.ProjectDto.builder()
+                .id(projectId)
+                .name("Step Seven Project")
+                .build())
+            .step7ModelUpdate(ProjectDocumentDto.Step7ModelUpdateDto.builder()
+                .modelChanges(List.of(ProjectDocumentDto.Step7ModelUpdateDto.ModelChangeDto.builder()
+                    .id(1L)
+                    .area("Navigation")
+                    .change("Added guard")
+                    .driver("UCA-1")
+                    .impact("Lower collision risk")
+                    .status("implemented")
+                    .evidence(List.of("SIM-1"))
+                    .build()))
+                .build())
+            .build();
+
+        projectDocumentService.saveOrUpdate(projectId, document);
+
+        given()
+            .contentType("application/json")
+            .body("""
+                {
+                  "id": 1,
+                  "updatedSteps": {
+                    "step1": true,
+                    "step3": true,
+                    "step5": true
+                  }
+                }
+                """)
+            .when()
+            .post("/api/projects/step_seven_updated_steps_update")
+            .then()
+            .statusCode(200)
+            .body("updatedSteps.step1", equalTo(true))
+            .body("updatedSteps.step2", equalTo(false))
+            .body("updatedSteps.step3", equalTo(true))
+            .body("updatedSteps.step4", equalTo(false))
+            .body("updatedSteps.step5", equalTo(true))
+            .body("modelChanges[0].area", equalTo("Navigation"));
+
+        given()
+            .when()
+            .get("/api/projects/" + projectId + "/full")
+            .then()
+            .statusCode(200)
+            .body("step7ModelUpdate.updatedSteps.step1", equalTo(true))
+            .body("step7ModelUpdate.updatedSteps.step2", equalTo(false))
+            .body("step7ModelUpdate.updatedSteps.step3", equalTo(true))
+            .body("step7ModelUpdate.updatedSteps.step4", equalTo(false))
+            .body("step7ModelUpdate.updatedSteps.step5", equalTo(true));
+    }
+
+    @Test
+    void minimalProjectUpdateResetsUpdatedStepsWhenReopenedFromCompleted() {
+        String location = given()
+            .contentType("application/json")
+            .body("""
+                {"name":"Reopen Project","description":"Status transition test","status":"COMPLETED"}
+                """)
+            .when()
+            .post("/api/projects")
+            .then()
+            .statusCode(201)
+            .extract()
+            .header("Location");
+
+        int projectId = Integer.parseInt(location.substring(location.lastIndexOf('/') + 1));
+
+        given()
+            .contentType("application/json")
+            .body("""
+                {
+                  "id": %d,
+                  "updatedSteps": {
+                    "step1": true,
+                    "step2": true,
+                    "step3": true,
+                    "step4": true,
+                    "step5": true
+                  }
+                }
+                """.formatted(projectId))
+            .when()
+            .post("/api/projects/step_seven_updated_steps_update")
+            .then()
+            .statusCode(200)
+            .body("updatedSteps.step1", equalTo(true))
+            .body("updatedSteps.step5", equalTo(true));
+
+        given()
+            .contentType("application/json")
+            .body("""
+                {
+                  "id": %d,
+                  "status": "REOPENED"
+                }
+                """.formatted(projectId))
+            .when()
+            .post("/api/projects/minimal-project-update")
+            .then()
+            .statusCode(200)
+            .body("id", equalTo(projectId))
+            .body("status", equalTo("REOPENED"));
+
+        given()
+            .when()
+            .get(location + "/full")
+            .then()
+            .statusCode(200)
+            .body("project.status", equalTo("REOPENED"))
+            .body("step7ModelUpdate.updatedSteps.step1", equalTo(false))
+            .body("step7ModelUpdate.updatedSteps.step2", equalTo(false))
+            .body("step7ModelUpdate.updatedSteps.step3", equalTo(false))
+            .body("step7ModelUpdate.updatedSteps.step4", equalTo(false))
+            .body("step7ModelUpdate.updatedSteps.step5", equalTo(false));
+
+        given()
+            .when()
+            .delete(location)
+            .then()
+            .statusCode(204);
     }
 
     @Test

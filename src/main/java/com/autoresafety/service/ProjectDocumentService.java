@@ -28,7 +28,7 @@ public class ProjectDocumentService {
 
     public ProjectDocumentDto getByProjectId(Long projectId) {
         ProjectDocument doc = ProjectDocument.find("project.id", projectId).firstResult();
-        return doc == null ? null : doc.document;
+        return doc == null ? null : normalizeDocument(doc.document);
     }
 
     @Transactional
@@ -38,7 +38,9 @@ public class ProjectDocumentService {
             throw new IllegalArgumentException("Project not found: " + projectId);
         }
 
-        validateStepThreeControllers(dto);
+        ProjectDocumentDto normalizedDto = normalizeDocument(dto);
+
+        validateStepThreeControllers(normalizedDto);
 
         ProjectDocument doc = ProjectDocument.find("project.id", projectId).firstResult();
         if (doc == null) {
@@ -46,9 +48,28 @@ public class ProjectDocumentService {
             doc.project = project;
         }
 
-        doc.document = dto;
+        doc.document = normalizedDto;
         projectDocumentRepository.persist(doc);
         return doc.document;
+    }
+
+    private static ProjectDocumentDto normalizeDocument(ProjectDocumentDto dto) {
+        if (dto == null) {
+            return null;
+        }
+
+        if (dto.getStep7ModelUpdate() == null) {
+            dto.setStep7ModelUpdate(ProjectDocumentDto.Step7ModelUpdateDto.builder().build());
+            return dto;
+        }
+
+        if (dto.getStep7ModelUpdate().getUpdatedSteps() == null) {
+            dto.getStep7ModelUpdate().setUpdatedSteps(
+                ProjectDocumentDto.Step7ModelUpdateDto.UpdatedStepsDto.builder().build()
+            );
+        }
+
+        return dto;
     }
 
     private static void validateStepThreeControllers(ProjectDocumentDto dto) {
