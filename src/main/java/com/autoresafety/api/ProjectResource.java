@@ -23,6 +23,7 @@ import com.autoresafety.api.dto.StepOneProjectInformationDto;
 import com.autoresafety.api.dto.StepOneProjectUpdatePayload;
 import com.autoresafety.api.dto.StepSevenUpdatedStepsUpdatePayload;
 import com.autoresafety.api.dto.StepThreeProjectUpdatePayload;
+import com.autoresafety.api.dto.StepTwoProjectUpdatePayload;
 import com.autoresafety.api.dto.project.ProjectDocumentDto;
 import com.autoresafety.domain.Project;
 import com.autoresafety.domain.ProjectDocument;
@@ -167,6 +168,77 @@ public class ProjectResource {
         }
 
         return document.getStep2Istar();
+    }
+
+    @POST
+    @Path("/step_two_project_update")
+    @Transactional
+    public Response updateStepTwo(@Valid StepTwoProjectUpdatePayload payload) {
+        ProjectDocumentDto document = projectDocumentService.getByProjectId(payload.id());
+        if (document == null) {
+            throw new NotFoundException();
+        }
+
+        ProjectDocumentDto.Step2IstarDto current = document.getStep2Istar();
+        if (current == null) {
+            current = ProjectDocumentDto.Step2IstarDto.builder().build();
+        }
+
+        if (payload.step2Information() != null) {
+            if (payload.step2Information().actors() != null) {
+                List<ProjectDocumentDto.Step2IstarDto.ActorDto> mappedActors = new ArrayList<>();
+                for (StepTwoProjectUpdatePayload.ActorPayload actor : payload.step2Information().actors()) {
+                    if (actor == null) {
+                        continue;
+                    }
+
+                    List<String> responsibilities = new ArrayList<>();
+                    if (actor.intentionalElements() != null) {
+                        for (StepTwoProjectUpdatePayload.IntentionalElementPayload element : actor.intentionalElements()) {
+                            if (element == null) {
+                                continue;
+                            }
+                            String name = trimToNull(element.name());
+                            if (name != null) {
+                                responsibilities.add(name);
+                            }
+                        }
+                    }
+
+                    mappedActors.add(ProjectDocumentDto.Step2IstarDto.ActorDto.builder()
+                        .id(parseNumericId(actor.id()))
+                        .name(trimToNull(actor.name()))
+                        .type(trimToNull(actor.type()))
+                        .responsibilities(responsibilities)
+                        .build());
+                }
+                current.setActors(mappedActors);
+            }
+
+            if (payload.step2Information().dependencies() != null) {
+                List<ProjectDocumentDto.Step2IstarDto.GoalLinkDto> mappedGoalLinks = new ArrayList<>();
+                for (StepTwoProjectUpdatePayload.DependencyPayload dependency : payload.step2Information().dependencies()) {
+                    if (dependency == null) {
+                        continue;
+                    }
+
+                    String goalName = dependency.dependum() == null ? null : trimToNull(dependency.dependum().name());
+                    String linkType = dependency.dependum() == null ? null : trimToNull(dependency.dependum().type());
+
+                    mappedGoalLinks.add(ProjectDocumentDto.Step2IstarDto.GoalLinkDto.builder()
+                        .id(parseNumericId(dependency.id()))
+                        .fromActor(trimToNull(dependency.depender()))
+                        .goal(goalName)
+                        .linkType(linkType)
+                        .build());
+                }
+                current.setGoalLinks(mappedGoalLinks);
+            }
+        }
+
+        document.setStep2Istar(current);
+        projectDocumentService.saveOrUpdate(payload.id(), document);
+        return Response.ok().build();
     }
 
     @GET

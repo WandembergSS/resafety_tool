@@ -28,17 +28,17 @@ class ProjectResourceTest extends QuarkusTestBase {
 
     @Test
     void projectCrudLifecycle() {
-    var location = given()
-        .contentType("application/json")
-        .body("""
-            {"name":"Demo Project","description":"Initial test project"}
-            """)
-        .when()
-        .post("/api/projects")
-        .then()
-        .statusCode(201)
-        .extract()
-        .header("Location");
+        var location = given()
+            .contentType("application/json")
+            .body("""
+                {"name":"Demo Project","description":"Initial test project"}
+                """)
+            .when()
+            .post("/api/projects")
+            .then()
+            .statusCode(201)
+            .extract()
+            .header("Location");
 
     given()
         .when()
@@ -72,6 +72,108 @@ class ProjectResourceTest extends QuarkusTestBase {
         .then()
         .statusCode(204);
     }
+
+        @Test
+        void stepTwoProjectUpdateAcceptsIstarPayload() {
+            String location = given()
+                .contentType("application/json")
+                .body("""
+                    {"name":"Step Two Update Project","description":"Step 2 payload route test"}
+                    """)
+                .when()
+                .post("/api/projects")
+                .then()
+                .statusCode(201)
+                .extract()
+                .header("Location");
+            int projectId = Integer.parseInt(location.substring(location.lastIndexOf('/') + 1));
+
+                given()
+                                .contentType("application/json")
+                .body("""
+                                                {
+                      "id": %d,
+                                                    "step2Information": {
+                                                        "modelName": "Chapter Case Study Project",
+                                                        "actors": [
+                                                            {
+                                                                "id": "actor-1",
+                                                                "name": "tesstst",
+                                                                "type": "Role",
+                                                                "intentionalElements": [
+                                                                    {
+                                                                        "id": "actor-1-resp-1",
+                                                                        "name": "Start mission",
+                                                                        "type": "Task"
+                                                                    },
+                                                                    {
+                                                                        "id": "actor-1-resp-2",
+                                                                        "name": "Monitor telemetry",
+                                                                        "type": "Task"
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "id": "actor-2",
+                                                                "name": "Autopilot",
+                                                                "type": "Agent",
+                                                                "intentionalElements": [
+                                                                    {
+                                                                        "id": "actor-2-resp-1",
+                                                                        "name": "Path planning",
+                                                                        "type": "Task"
+                                                                    },
+                                                                    {
+                                                                        "id": "actor-2-resp-2",
+                                                                        "name": "Obstacle avoidance",
+                                                                        "type": "Task"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ],
+                                                        "dependencies": [
+                                                            {
+                                                                "id": "1",
+                                                                "depender": "actor-1",
+                                                                "dependum": {
+                                                                    "id": "1",
+                                                                    "name": "Maintain safe mission execution",
+                                                                    "type": "Goal"
+                                                                }
+                                                            },
+                                                            {
+                                                                "id": "2",
+                                                                "depender": "actor-2",
+                                                                "dependum": {
+                                                                    "id": "2",
+                                                                    "name": "Avoid obstacles in real time",
+                                                                    "type": "Goal"
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                                    """.formatted(projectId))
+                                .when()
+                                .post("/api/projects/step_two_project_update")
+                                .then()
+                                .statusCode(200);
+
+                given()
+                                .when()
+                                                .get("/api/projects/" + projectId + "/full")
+                                .then()
+                                .statusCode(200)
+                                .body("step2Istar.actors[0].name", equalTo("tesstst"))
+                                .body("step2Istar.actors[0].responsibilities[0]", equalTo("Start mission"))
+                                .body("step2Istar.goalLinks[0].goal", equalTo("Maintain safe mission execution"));
+
+                                            given()
+                                                .when()
+                                                .delete(location)
+                                                .then()
+                                                .statusCode(204);
+        }
 
     @Test
     void fullProjectEndpointReturnsAllDocumentSections() {
