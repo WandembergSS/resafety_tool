@@ -13,6 +13,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.ClientWebApplicationException;
 
 @Path("/api/ai")
@@ -20,6 +21,8 @@ import org.jboss.resteasy.reactive.ClientWebApplicationException;
 @Consumes(MediaType.APPLICATION_JSON)
 @PermitAll
 public class AiResource {
+
+    private static final Logger LOG = Logger.getLogger(AiResource.class);
 
     @Inject
     @RestClient
@@ -33,6 +36,7 @@ public class AiResource {
         } catch (ClientWebApplicationException exception) {
             return forwardUpstreamError(exception);
         } catch (ProcessingException exception) {
+            LOG.error("AI service proxy failed", exception);
             return Response.status(Response.Status.BAD_GATEWAY)
                     .entity(unavailableError())
                     .build();
