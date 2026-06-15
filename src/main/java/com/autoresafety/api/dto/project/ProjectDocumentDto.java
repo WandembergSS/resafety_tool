@@ -202,7 +202,9 @@ public class ProjectDocumentDto {
         @NoArgsConstructor
         @AllArgsConstructor
         public static class Step2IstarDto {
+                private String modelName;
                 private List<ActorDto> actors;
+                private List<DependencyDto> dependencies;
                 private List<GoalLinkDto> goalLinks;
 
                 @Data
@@ -210,13 +212,70 @@ public class ProjectDocumentDto {
                 @NoArgsConstructor
                 @AllArgsConstructor
                 public static class ActorDto {
-                        @Positive
-                        private Long id;
+                        private String id;
 
                         private String name;
 
                         private String type;
-                            private List<String> responsibilities;
+                        private Double x;
+                        private Double y;
+                        private List<String> isA;
+                        private List<String> participatesIn;
+                        private List<IntentionalElementDto> intentionalElements;
+                        private InternalLinksDto internalLinks;
+                        private List<String> responsibilities;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class IntentionalElementDto {
+                        private String id;
+                        private String name;
+                        private String type;
+                        private Double x;
+                        private Double y;
+                        private List<String> refinedBy;
+                        private List<String> qualifies;
+                        private String accidentLevel;
+                        private String safetyGoalKind;
+                        private List<String> obstructs;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class InternalLinksDto {
+                        private List<Object> refinements;
+                        private List<Object> contributions;
+                        private List<Object> neededBy;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class DependencyDto {
+                        private String id;
+                        private String depender;
+                        private String dependerElement;
+                        private Double x;
+                        private Double y;
+                        private DependumDto dependum;
+                        private String dependee;
+                        private String dependeeElement;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class DependumDto {
+                        private String id;
+                        private String name;
+                        private String type;
                 }
 
                 @Data

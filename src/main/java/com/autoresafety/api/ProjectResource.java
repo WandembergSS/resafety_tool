@@ -162,7 +162,9 @@ public class ProjectResource {
 
         if (document.getStep2Istar() == null) {
             return ProjectDocumentDto.Step2IstarDto.builder()
+                .modelName(null)
                 .actors(null)
+                .dependencies(null)
                 .goalLinks(null)
                 .build();
         }
@@ -185,6 +187,8 @@ public class ProjectResource {
         }
 
         if (payload.step2Information() != null) {
+            current.setModelName(trimToNull(payload.step2Information().modelName()));
+
             if (payload.step2Information().actors() != null) {
                 List<ProjectDocumentDto.Step2IstarDto.ActorDto> mappedActors = new ArrayList<>();
                 for (StepTwoProjectUpdatePayload.ActorPayload actor : payload.step2Information().actors()) {
@@ -192,23 +196,59 @@ public class ProjectResource {
                         continue;
                     }
 
+                    List<ProjectDocumentDto.Step2IstarDto.IntentionalElementDto> mappedIntentionalElements = new ArrayList<>();
                     List<String> responsibilities = new ArrayList<>();
                     if (actor.intentionalElements() != null) {
                         for (StepTwoProjectUpdatePayload.IntentionalElementPayload element : actor.intentionalElements()) {
                             if (element == null) {
                                 continue;
                             }
-                            String name = trimToNull(element.name());
-                            if (name != null) {
-                                responsibilities.add(name);
+
+                            String elementName = trimToNull(element.name());
+                            if (elementName != null) {
+                                responsibilities.add(elementName);
                             }
+
+                            mappedIntentionalElements.add(ProjectDocumentDto.Step2IstarDto.IntentionalElementDto.builder()
+                                .id(trimToNull(element.id()))
+                                .name(elementName)
+                                .type(trimToNull(element.type()))
+                                .x(element.x())
+                                .y(element.y())
+                                .refinedBy(toTrimmedList(element.refinedBy()))
+                                .qualifies(toTrimmedList(element.qualifies()))
+                                .accidentLevel(trimToNull(element.accidentLevel()))
+                                .safetyGoalKind(trimToNull(element.safetyGoalKind()))
+                                .obstructs(toTrimmedList(element.obstructs()))
+                                .build());
                         }
                     }
 
+                    ProjectDocumentDto.Step2IstarDto.InternalLinksDto mappedInternalLinks = null;
+                    if (actor.internalLinks() != null) {
+                        mappedInternalLinks = ProjectDocumentDto.Step2IstarDto.InternalLinksDto.builder()
+                            .refinements(actor.internalLinks().refinements() == null
+                                ? Collections.emptyList()
+                                : new ArrayList<>(actor.internalLinks().refinements()))
+                            .contributions(actor.internalLinks().contributions() == null
+                                ? Collections.emptyList()
+                                : new ArrayList<>(actor.internalLinks().contributions()))
+                            .neededBy(actor.internalLinks().neededBy() == null
+                                ? Collections.emptyList()
+                                : new ArrayList<>(actor.internalLinks().neededBy()))
+                            .build();
+                    }
+
                     mappedActors.add(ProjectDocumentDto.Step2IstarDto.ActorDto.builder()
-                        .id(parseNumericId(actor.id()))
+                        .id(trimToNull(actor.id()))
                         .name(trimToNull(actor.name()))
                         .type(trimToNull(actor.type()))
+                        .x(actor.x())
+                        .y(actor.y())
+                        .isA(toTrimmedList(actor.isA()))
+                        .participatesIn(toTrimmedList(actor.participatesIn()))
+                        .intentionalElements(mappedIntentionalElements)
+                        .internalLinks(mappedInternalLinks)
                         .responsibilities(responsibilities)
                         .build());
                 }
@@ -216,22 +256,40 @@ public class ProjectResource {
             }
 
             if (payload.step2Information().dependencies() != null) {
+                List<ProjectDocumentDto.Step2IstarDto.DependencyDto> mappedDependencies = new ArrayList<>();
                 List<ProjectDocumentDto.Step2IstarDto.GoalLinkDto> mappedGoalLinks = new ArrayList<>();
                 for (StepTwoProjectUpdatePayload.DependencyPayload dependency : payload.step2Information().dependencies()) {
                     if (dependency == null) {
                         continue;
                     }
 
-                    String goalName = dependency.dependum() == null ? null : trimToNull(dependency.dependum().name());
-                    String linkType = dependency.dependum() == null ? null : trimToNull(dependency.dependum().type());
+                    ProjectDocumentDto.Step2IstarDto.DependumDto mappedDependum = dependency.dependum() == null
+                        ? null
+                        : ProjectDocumentDto.Step2IstarDto.DependumDto.builder()
+                            .id(trimToNull(dependency.dependum().id()))
+                            .name(trimToNull(dependency.dependum().name()))
+                            .type(trimToNull(dependency.dependum().type()))
+                            .build();
+
+                    mappedDependencies.add(ProjectDocumentDto.Step2IstarDto.DependencyDto.builder()
+                        .id(trimToNull(dependency.id()))
+                        .depender(trimToNull(dependency.depender()))
+                        .dependerElement(trimToNull(dependency.dependerElement()))
+                        .x(dependency.x())
+                        .y(dependency.y())
+                        .dependum(mappedDependum)
+                        .dependee(trimToNull(dependency.dependee()))
+                        .dependeeElement(trimToNull(dependency.dependeeElement()))
+                        .build());
 
                     mappedGoalLinks.add(ProjectDocumentDto.Step2IstarDto.GoalLinkDto.builder()
                         .id(parseNumericId(dependency.id()))
                         .fromActor(trimToNull(dependency.depender()))
-                        .goal(goalName)
-                        .linkType(linkType)
+                        .goal(mappedDependum == null ? null : mappedDependum.getName())
+                        .linkType(mappedDependum == null ? null : mappedDependum.getType())
                         .build());
                 }
+                current.setDependencies(mappedDependencies);
                 current.setGoalLinks(mappedGoalLinks);
             }
         }

@@ -2,7 +2,6 @@ package com.autoresafety.api.dto.project;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.autoresafety.domain.ProjectStatus;
-import com.autoresafety.api.dto.project.SourceType;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
@@ -225,7 +224,9 @@ public class ProjectDocumentPatchDto {
         @NoArgsConstructor
         @AllArgsConstructor
         public static class Step2IstarPatchDto {
+                private String modelName;
                 private List<ActorPatchDto> actors;
+                private List<DependencyPatchDto> dependencies;
                 private List<GoalLinkPatchDto> goalLinks;
 
                 @JsonInclude(NON_NULL)
@@ -234,13 +235,74 @@ public class ProjectDocumentPatchDto {
                 @NoArgsConstructor
                 @AllArgsConstructor
                 public static class ActorPatchDto {
-                        @Positive
-                        private Long id;
+                        private String id;
 
                         private String name;
 
                         private String type;
-                            private List<String> responsibilities;
+                        private Double x;
+                        private Double y;
+                        private List<String> isA;
+                        private List<String> participatesIn;
+                        private List<IntentionalElementPatchDto> intentionalElements;
+                        private InternalLinksPatchDto internalLinks;
+                        private List<String> responsibilities;
+                }
+
+                @JsonInclude(NON_NULL)
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class IntentionalElementPatchDto {
+                        private String id;
+                        private String name;
+                        private String type;
+                        private Double x;
+                        private Double y;
+                        private List<String> refinedBy;
+                        private List<String> qualifies;
+                        private String accidentLevel;
+                        private String safetyGoalKind;
+                        private List<String> obstructs;
+                }
+
+                @JsonInclude(NON_NULL)
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class InternalLinksPatchDto {
+                        private List<Object> refinements;
+                        private List<Object> contributions;
+                        private List<Object> neededBy;
+                }
+
+                @JsonInclude(NON_NULL)
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class DependencyPatchDto {
+                        private String id;
+                        private String depender;
+                        private String dependerElement;
+                        private Double x;
+                        private Double y;
+                        private DependumPatchDto dependum;
+                        private String dependee;
+                        private String dependeeElement;
+                }
+
+                @JsonInclude(NON_NULL)
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class DependumPatchDto {
+                        private String id;
+                        private String name;
+                        private String type;
                 }
 
                 @JsonInclude(NON_NULL)

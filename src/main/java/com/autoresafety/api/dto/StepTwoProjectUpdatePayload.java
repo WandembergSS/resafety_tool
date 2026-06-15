@@ -20,21 +20,45 @@ public record StepTwoProjectUpdatePayload(
             String id,
             String name,
             String type,
-            List<IntentionalElementPayload> intentionalElements
+            Double x,
+            Double y,
+            List<String> isA,
+            List<String> participatesIn,
+            List<IntentionalElementPayload> intentionalElements,
+            InternalLinksPayload internalLinks
     ) {
     }
 
     public record IntentionalElementPayload(
             String id,
             String name,
-            String type
+            String type,
+            Double x,
+            Double y,
+            List<String> refinedBy,
+            List<String> qualifies,
+            String accidentLevel,
+            String safetyGoalKind,
+            List<String> obstructs
+    ) {
+    }
+
+    public record InternalLinksPayload(
+            List<Object> refinements,
+            List<Object> contributions,
+            List<Object> neededBy
     ) {
     }
 
     public record DependencyPayload(
             String id,
             String depender,
-            DependumPayload dependum
+            String dependerElement,
+            Double x,
+            Double y,
+            DependumPayload dependum,
+            String dependee,
+            String dependeeElement
     ) {
     }
 

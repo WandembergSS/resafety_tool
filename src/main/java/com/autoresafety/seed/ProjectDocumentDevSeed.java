@@ -135,13 +135,13 @@ public class ProjectDocumentDevSeed {
         ProjectDocumentDto.Step2IstarDto step2 = ProjectDocumentDto.Step2IstarDto.builder()
             .actors(List.of(
                 ProjectDocumentDto.Step2IstarDto.ActorDto.builder()
-                    .id(1L)
+                    .id("1")
                     .name("Operator")
                     .type("human")
                     .responsibilities(List.of("Start mission", "Monitor telemetry"))
                     .build(),
                 ProjectDocumentDto.Step2IstarDto.ActorDto.builder()
-                    .id(2L)
+                    .id("2")
                     .name("Autopilot")
                     .type("software")
                     .responsibilities(List.of("Path planning", "Obstacle avoidance"))
