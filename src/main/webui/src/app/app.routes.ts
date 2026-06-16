@@ -1,0 +1,95 @@
+import { Routes } from '@angular/router';
+
+import { authGuard } from './guards/auth.guard';
+import { guestGuard } from './guards/guest.guard';
+import { reviewedStepGuard } from './guards/reviewed-step.guard';
+
+export const routes: Routes = [
+	{
+		path: 'login',
+		canActivate: [guestGuard],
+		loadComponent: () =>
+			import('./pages/login-page/login-page.component').then((m) => m.LoginPageComponent)
+	},
+	{
+		path: '',
+		canActivate: [authGuard],
+		loadComponent: () =>
+			import('./pages/home-page/home-page.component').then((m) => m.HomePageComponent)
+	},
+	{
+		path: 'scope',
+		canActivate: [authGuard, reviewedStepGuard],
+		data: {
+			reviewStepKey: 'step1'
+		},
+		loadComponent: () =>
+			import('./pages/scope-page/scope-page.component').then((m) => m.ScopePageComponent)
+	},
+	{
+		path: 'istar-models',
+		canActivate: [authGuard, reviewedStepGuard],
+		data: {
+			reviewStepKey: 'step2'
+		},
+		loadComponent: () =>
+			import('./pages/istar-models-page/istar-models-page.component').then(
+				(m) => m.IstarModelsPageComponent
+			)
+	},
+	{
+		path: 'control-structure',
+		canActivate: [authGuard, reviewedStepGuard],
+		data: {
+			reviewStepKey: 'step3'
+		},
+		loadComponent: () =>
+			import('./pages/control-structure-page/control-structure-page.component').then(
+				(m) => m.ControlStructurePageComponent
+			)
+	},
+	{
+		path: 'ucas',
+		canActivate: [authGuard, reviewedStepGuard],
+		data: {
+			reviewStepKey: 'step4'
+		},
+		loadComponent: () =>
+			import('./pages/ucas-page/ucas-page.component').then((m) => m.UcasPageComponent)
+	},
+	{
+		path: 'controller-constraints',
+		redirectTo: 'ucas',
+		pathMatch: 'full'
+	},
+	{
+		path: 'loss-scenarios',
+		canActivate: [authGuard, reviewedStepGuard],
+		data: {
+			reviewStepKey: 'step5'
+		},
+		loadComponent: () =>
+			import('./pages/loss-scenarios-page/loss-scenarios-page.component').then(
+				(m) => m.LossScenariosPageComponent
+			)
+	},
+	{
+		path: 'model-update',
+		canActivate: [authGuard],
+		loadComponent: () =>
+			import('./pages/model-update-page/model-update-summary-page.component').then(
+				(m) => m.ModelUpdateSummaryPageComponent
+			)
+	},
+	{
+		path: 'help',
+		canActivate: [authGuard],
+		loadComponent: () =>
+			import('./pages/help-page/help-page.component').then((m) => m.HelpPageComponent)
+	},
+	{
+		path: '**',
+		redirectTo: '',
+		pathMatch: 'full'
+	}
+];

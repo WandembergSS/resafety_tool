@@ -38,8 +38,10 @@ nb-configuration.xml
 
 # Local environment
 .env
+docs/
 
 # Plugin directory
 /.quarkus/cli/plugins/
+.quinoa/
 # TLS Certificates
 .certs/

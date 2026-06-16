@@ -1,0 +1,446 @@
+<section class="page-header">
+  <div class="page-header__main">
+    <p class="step">Step 5</p>
+    <div class="page-header__title-row">
+      <h2>Analyze Loss Scenarios and Derive Safety Requirements</h2>
+      <button type="button" class="button button--ai" [disabled]="isGeneratingStepFiveAi()" (click)="openStepFiveAiModal()">
+        <span class="button__icon" aria-hidden="true">
+          @if (isGeneratingStepFiveAi()) {
+            <span class="button__spinner"></span>
+          } @else {
+            <span class="ai-robot-icon" aria-hidden="true"></span>
+          }
+        </span>
+        <span>{{ isGeneratingStepFiveAi() ? 'Generating...' : 'Generate with AI' }}</span>
+      </button>
+      <button type="button" class="button button--secondary" (click)="openBpmnModelModal()">Bpmn and more details</button>
+    </div>
+    <p>
+      Complete the Step 5 traceability chain by recording the causal conditions behind each unsafe behavior and then
+      deriving explicit safety requirements that mitigate those scenarios.
+    </p>
+  </div>
+</section>
+
+<div class="page-actions">
+  <button type="button" class="button button--secondary" [disabled]="isSavingStepFive()" (click)="saveStepFive()">
+    {{ isSavingStepFive() ? 'Saving...' : 'Save' }}
+  </button>
+  <button type="button" class="button" [disabled]="isSavingStepFive()" (click)="saveStepFive(true)">
+    {{ isSavingStepFive() ? 'Saving...' : 'Save and Continue' }}
+  </button>
+</div>
+<br />
+
+@if (stepFiveSaveMessage()) {
+  <div class="save-feedback save-feedback--success">
+    {{ stepFiveSaveMessage() }}
+  </div>
+}
+
+@if (stepFiveSaveError()) {
+  <div class="save-feedback save-feedback--error">
+    {{ stepFiveSaveError() }}
+  </div>
+}
+
+<section class="summary-strip" aria-label="Step 5 summary">
+  @for (card of summaryCards(); track card.label) {
+    <article class="summary-card">
+      <span>{{ card.label }}</span>
+      <strong>{{ card.value }}</strong>
+    </article>
+  }
+</section>
+
+<section class="guardrail-card">
+  <div>
+    <p class="guardrail-card__eyebrow">System-level traceability guardrails</p>
+    <h3>Required chain before Step 6</h3>
+    <p>
+      Safety Requirement (SR) to mitigates to Loss Scenario (LS) to causes to UCA / HC to leads to System-Level Hazard.
+    </p>
+  </div>
+  <div class="guardrail-card__status">
+    <span class="badge" [class.badge--ready]="traceabilityGuardrails().readyForStep6">
+      {{ traceabilityGuardrails().readyForStep6 ? 'Ready for Step 6' : 'Traceability still incomplete' }}
+    </span>
+    <p>{{ traceabilityGuardrails().requirementsWithTraceability }}/{{ safetyRequirements().length }} requirements linked to at least one LS.</p>
+    <p>{{ traceabilityGuardrails().scenariosWithTraceability }}/{{ lossScenarios().length }} scenarios linked to at least one UCA or HC.</p>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card__heading">
+    <div>
+      <h3>Loss scenarios</h3>
+      <p>Each loss scenario remains linked to at least one Step 4 unsafe behavior and its related hazards.</p>
+    </div>
+    <button type="button" class="button button--secondary card__heading-button" (click)="openNewLossScenarioModal()">
+      New loss scenario
+    </button>
+  </div>
+
+  <div class="register-list">
+    @for (scenario of lossScenarios(); track scenario.id) {
+      <article class="register-card register-card--loss">
+        <header>
+          <div>
+            <span class="register-card__ref">{{ scenario.id }}</span>
+            <h4>{{ scenario.description }}</h4>
+          </div>
+          <div class="register-card__actions">
+            <button
+              type="button"
+              class="icon-action"
+              (click)="openEditLossScenario(scenario)"
+              aria-label="Edit loss scenario"
+              title="Edit"
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              class="icon-action icon-action--danger"
+              (click)="removeLossScenario(scenario.id)"
+              aria-label="Delete loss scenario"
+              title="Delete"
+            >
+              🗑
+            </button>
+          </div>
+        </header>
+
+        <div class="register-card__detail">
+          <strong>Associated UCAs / HCs</strong>
+          @if (scenario.associatedUnsafeBehaviorIds.length > 0) {
+            <ul class="inline-list">
+              @for (behaviorId of scenario.associatedUnsafeBehaviorIds; track behaviorId) {
+                <li>{{ behaviorLabel(behaviorId) }}</li>
+              }
+            </ul>
+          } @else {
+            <p>No unsafe behaviors linked.</p>
+          }
+        </div>
+
+        <div class="register-card__detail">
+          <strong>System-level hazards</strong>
+          @if (lossScenarioHazards(scenario).length > 0) {
+            <ul class="inline-list">
+              @for (hazard of lossScenarioHazards(scenario); track hazard) {
+                <li>{{ hazard }}</li>
+              }
+            </ul>
+          } @else {
+            <p>No hazards resolved.</p>
+          }
+        </div>
+
+        <div class="register-card__detail">
+          <strong>Source / rationale</strong>
+          <p>{{ scenario.sourceRationale || 'Not provided' }}</p>
+        </div>
+      </article>
+    }
+
+    @if (lossScenarios().length === 0) {
+      <p class="register-list__empty">No loss scenarios recorded yet.</p>
+    }
+  </div>
+</section>
+
+<section class="card">
+  <div class="card__heading">
+    <div>
+      <h3>Safety requirements</h3>
+      <p>Each requirement must remain linked to at least one recorded loss scenario.</p>
+    </div>
+    <button type="button" class="button button--secondary card__heading-button" (click)="openNewSafetyRequirementModal()">
+      New safety requirement
+    </button>
+  </div>
+
+  <div class="register-list">
+    @for (requirement of safetyRequirements(); track requirement.id) {
+      <article class="register-card register-card--requirement">
+        <header>
+          <div>
+            <span class="register-card__ref">{{ requirement.id }}</span>
+            <h4>{{ requirement.description }}</h4>
+          </div>
+          <div class="register-card__actions">
+            <span class="badge" [class.badge--ready]="requirement.addressedLossScenarioIds.length > 0">
+              {{ requirement.addressedLossScenarioIds.length > 0 ? 'SR to LS link confirmed' : 'Traceability missing' }}
+            </span>
+            <button
+              type="button"
+              class="icon-action"
+              (click)="openEditSafetyRequirement(requirement)"
+              aria-label="Edit safety requirement"
+              title="Edit"
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              class="icon-action icon-action--danger"
+              (click)="removeSafetyRequirement(requirement.id)"
+              aria-label="Delete safety requirement"
+              title="Delete"
+            >
+              🗑
+            </button>
+          </div>
+        </header>
+
+        <div class="register-card__detail">
+          <strong>Addressed loss scenarios</strong>
+          @if (requirement.addressedLossScenarioIds.length > 0) {
+            <ul class="inline-list">
+              @for (scenarioId of requirement.addressedLossScenarioIds; track scenarioId) {
+                <li>{{ lossScenarioLabel(scenarioId) }}</li>
+              }
+            </ul>
+          } @else {
+            <p>No linked loss scenarios.</p>
+          }
+        </div>
+
+        <div class="register-card__detail">
+          <strong>Traceability status</strong>
+          <p>
+            {{ requirement.addressedLossScenarioIds.length > 0
+              ? 'This requirement is linked to at least one recorded loss scenario.'
+              : 'Link this requirement to one or more loss scenarios to preserve Step 5 traceability.' }}
+          </p>
+        </div>
+      </article>
+    }
+
+    @if (safetyRequirements().length === 0) {
+      <p class="register-list__empty">No safety requirements recorded yet.</p>
+    }
+  </div>
+</section>
+
+@if (isLossScenarioModalOpen()) {
+  <div class="modal-backdrop" (click)="closeLossScenarioModal()">
+    <div
+      class="modal modal--step-five-edit"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="lossScenarioModalTitle()"
+    >
+      <header class="modal__header">
+        <div>
+          <p class="card__eyebrow">Loss scenario identification: Steps 5.1 and 5.2</p>
+          <h4>{{ lossScenarioModalTitle() }}</h4>
+        </div>
+        <button type="button" class="modal__close" (click)="closeLossScenarioModal()">×</button>
+      </header>
+
+      <form class="modal__body form-grid" [formGroup]="lossScenarioForm" (ngSubmit)="addLossScenario()">
+        <label class="field">
+          <span>Loss Scenario ID</span>
+          <input type="text" formControlName="id" placeholder="LS-04" />
+          <small>Use the LS-XX format.</small>
+          @if (controlInvalid('lossScenarioForm', 'id') && !lossScenarioForm.controls.id.hasError('duplicate')) {
+            <span class="field-error">Use the LS-XX format.</span>
+          }
+          @if (lossScenarioForm.controls.id.touched && lossScenarioForm.controls.id.hasError('duplicate')) {
+            <span class="field-error">This loss scenario id already exists. Use a unique id.</span>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Loss Scenario Description</span>
+          <textarea
+            rows="5"
+            formControlName="description"
+            placeholder="Describe the combination of conditions, environmental factors, or operational errors that allow the unsafe behavior to produce a hazard."
+          ></textarea>
+          <small>Capture the causal conditions that make the scenario credible.</small>
+          @if (controlInvalid('lossScenarioForm', 'description')) {
+            <span class="field-error">Provide a specific loss-scenario narrative with at least 20 characters.</span>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Associated Unsafe Behaviors (UCAs / HCs)</span>
+          <select multiple formControlName="associatedUnsafeBehaviorIds" size="5">
+            @for (behavior of unsafeBehaviorCatalog(); track behavior.id) {
+              <option [value]="behavior.id">{{ behavior.id }} ({{ behavior.type }}) - {{ behavior.title }}</option>
+            }
+          </select>
+          <small>Select at least one UCA or HC to maintain traceability to the control structure.</small>
+          @if (controlInvalid('lossScenarioForm', 'associatedUnsafeBehaviorIds')) {
+            <span class="field-error">Select at least one UCA or HC.</span>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Source / Rationale</span>
+          <input type="text" formControlName="sourceRationale" placeholder="Literature, system manual, or expert reasoning" />
+          <small>Optional justification for why the scenario is plausible.</small>
+        </label>
+
+        <div class="page-actions modal__actions field--full">
+          <button type="button" class="button button--secondary" (click)="closeLossScenarioModal()">Cancel</button>
+          <button type="submit" class="button">{{ lossScenarioModalSubmitLabel() }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (isSafetyRequirementModalOpen()) {
+  <div class="modal-backdrop" (click)="closeSafetyRequirementModal()">
+    <div
+      class="modal modal--step-five-edit"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="safetyRequirementModalTitle()"
+    >
+      <header class="modal__header">
+        <div>
+          <p class="card__eyebrow">Safety requirement derivation: Step 5.3</p>
+          <h4>{{ safetyRequirementModalTitle() }}</h4>
+        </div>
+        <button type="button" class="modal__close" (click)="closeSafetyRequirementModal()">×</button>
+      </header>
+
+      <form class="modal__body form-grid" [formGroup]="safetyRequirementForm" (ngSubmit)="addSafetyRequirement()">
+        <label class="field">
+          <span>Safety Requirement ID</span>
+          <input type="text" formControlName="id" placeholder="SR-04" />
+          <small>Use the SR-XX format.</small>
+          @if (controlInvalid('safetyRequirementForm', 'id') && !safetyRequirementForm.controls.id.hasError('duplicate')) {
+            <span class="field-error">Use the SR-XX format.</span>
+          }
+          @if (safetyRequirementForm.controls.id.touched && safetyRequirementForm.controls.id.hasError('duplicate')) {
+            <span class="field-error">This safety requirement id already exists. Use a unique id.</span>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Safety Requirement Description</span>
+          <textarea
+            rows="5"
+            formControlName="description"
+            placeholder="Describe the alert, interlock, interface behavior, cross-check, or other mitigation strategy that addresses the loss scenario."
+          ></textarea>
+          <small>Write the requirement as an actionable system behavior.</small>
+          @if (controlInvalid('safetyRequirementForm', 'description')) {
+            <span class="field-error">Provide an actionable mitigation strategy with at least 20 characters.</span>
+          }
+        </label>
+
+        <label class="field field--full">
+          <span>Addressed Loss Scenario(s)</span>
+          <select multiple formControlName="addressedLossScenarioIds" size="5">
+            @for (scenario of lossScenarios(); track scenario.id) {
+              <option [value]="scenario.id">{{ scenario.id }} - {{ scenario.description }}</option>
+            }
+          </select>
+          <small>Select at least one loss scenario to justify why the requirement exists.</small>
+          @if (controlInvalid('safetyRequirementForm', 'addressedLossScenarioIds')) {
+            <span class="field-error">Select at least one loss scenario.</span>
+          }
+        </label>
+
+        <div class="page-actions modal__actions field--full">
+          <button type="button" class="button button--secondary" (click)="closeSafetyRequirementModal()">Cancel</button>
+          <button type="submit" class="button">{{ safetyRequirementModalSubmitLabel() }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (isStepFiveAiModalOpen()) {
+  <div class="modal-backdrop" (click)="closeStepFiveAiModal()">
+    <div class="modal modal--ai" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Generate Step 5 with AI">
+      <header class="modal__header">
+        <h4>Generate Step 5 with AI</h4>
+        <button type="button" class="modal__close" (click)="closeStepFiveAiModal()" [disabled]="isGeneratingStepFiveAi()">×</button>
+      </header>
+      <p class="modal__intro">
+        Configure how many new loss scenarios and safety requirements the AI should propose. Existing entries are always
+        preserved &mdash; the assistant only adds new items.
+      </p>
+      <form class="modal__body form-grid" [formGroup]="stepFiveAiConfigForm" (ngSubmit)="submitStepFiveAiRequest()">
+        <label class="field">
+          <span>Minimum new loss scenarios</span>
+          <input type="number" min="1" formControlName="minLossScenarios" />
+        </label>
+        <label class="field">
+          <span>Maximum new loss scenarios</span>
+          <input type="number" min="1" formControlName="maxLossScenarios" />
+        </label>
+        <label class="field">
+          <span>Minimum new safety requirements</span>
+          <input type="number" min="0" formControlName="minSafetyRequirements" />
+        </label>
+        <label class="field">
+          <span>Maximum new safety requirements</span>
+          <input type="number" min="0" formControlName="maxSafetyRequirements" />
+        </label>
+        <label class="field field--full">
+          <span>Additional instructions (optional)</span>
+          <textarea
+            rows="3"
+            formControlName="promptInstructions"
+            placeholder="Emphasise environmental conditions, prioritise operator-facing requirements, etc."
+          ></textarea>
+        </label>
+        @if (stepFiveAiConfigError()) {
+          <p class="modal__error field--full">{{ stepFiveAiConfigError() }}</p>
+        }
+        <div class="page-actions modal__actions ai-modal__actions field--full">
+          <button type="button" class="button button--secondary" (click)="closeStepFiveAiModal()" [disabled]="isGeneratingStepFiveAi()">
+            Cancel
+          </button>
+          <button type="submit" class="button button--ai" [disabled]="isGeneratingStepFiveAi()">
+            <span class="button__icon" aria-hidden="true">
+              @if (isGeneratingStepFiveAi()) {
+                <span class="button__spinner"></span>
+              } @else {
+                <span class="ai-robot-icon" aria-hidden="true"></span>
+              }
+            </span>
+            <span>{{ isGeneratingStepFiveAi() ? 'Generating...' : 'Generate' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (isBpmnModelModalOpen()) {
+  <div class="modal-backdrop" (click)="closeBpmnModelModal()">
+    <div class="modal modal--bpmn" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="modal__header">
+        <h4>BPMN model</h4>
+        <button type="button" class="modal__close" (click)="closeBpmnModelModal()">×</button>
+      </header>
+      <img class="bpmn-model-image" src="/assets/step-5-bpmn.png" alt="BPMN model for Step 5 loss scenarios and safety requirements" />
+      <div class="modal__actions">
+        <a class="button button--secondary" href="/#resafety-timeline" target="_blank" rel="noopener noreferrer">
+          More details
+        </a>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="page-actions page-actions--bottom">
+  <button type="button" class="button button--secondary" [disabled]="isSavingStepFive()" (click)="saveStepFive()">
+    {{ isSavingStepFive() ? 'Saving...' : 'Save' }}
+  </button>
+  <button type="button" class="button" [disabled]="isSavingStepFive()" (click)="saveStepFive(true)">
+    {{ isSavingStepFive() ? 'Saving...' : 'Save and Continue' }}
+  </button>
+</div>

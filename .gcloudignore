@@ -1,0 +1,33 @@
+# Files NOT uploaded to Cloud Build by `gcloud run deploy --source .`
+# The multi-stage Dockerfile rebuilds the SPA and the fast-jar from source,
+# so none of these are needed in the build context.
+
+# Version control
+.git/
+.gitignore
+.github/
+
+# Local Maven build output (rebuilt inside the image)
+target/
+
+# Node dependencies & Angular caches (Quinoa reinstalls/rebuilds them)
+**/node_modules/
+**/.angular/
+src/main/webui/dist/
+src/main/webui/.tmp_pdf_preview/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+.factorypath
+
+# OS noise
+.DS_Store
+**/.DS_Store
+
+# Logs & local env
+*.log
+**/npm-debug.log*
+**/yarn-error.log*
+.env

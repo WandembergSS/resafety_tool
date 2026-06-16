@@ -2,6 +2,7 @@ package com.autoresafety.api;
 
 import com.autoresafety.api.dto.StepTwoModelCorrectionPayload;
 import com.autoresafety.api.dto.StepTwoModelCorrectionResponse;
+import com.autoresafety.service.GeminiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,14 +13,11 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
-import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.reactive.ClientWebApplicationException;
 
 @Path("/api/ai")
 @Produces(MediaType.APPLICATION_JSON)
@@ -31,8 +29,7 @@ public class AiResource {
     private static final String STEP_TWO_CORRECTION_CONTEXT = "Step 2 iStar/iStar4Safety model correction";
 
     @Inject
-    @RestClient
-    AiServiceClient aiServiceClient;
+    GeminiService geminiService;
 
     @Inject
     ObjectMapper objectMapper;
@@ -41,14 +38,9 @@ public class AiResource {
     @Path("/ask")
     public Response ask(JsonNode payload) {
         try {
-            return Response.ok(aiServiceClient.ask(payload)).build();
-        } catch (ClientWebApplicationException exception) {
-            return forwardUpstreamError(exception);
-        } catch (ProcessingException exception) {
-            LOG.error("AI service proxy failed", exception);
-            return Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(unavailableError())
-                    .build();
+            return Response.ok(callGemini(payload)).build();
+        } catch (RuntimeException exception) {
+            return aiError(exception);
         }
     }
 
@@ -60,7 +52,7 @@ public class AiResource {
         request.put("context", firstNonBlank(payload.context(), STEP_TWO_CORRECTION_CONTEXT));
 
         try {
-            JsonNode aiResponse = aiServiceClient.ask(request);
+            JsonNode aiResponse = callGemini(request);
             JsonNode correctedModel = extractCorrectedModel(aiResponse);
             if (correctedModel == null) {
                 return Response.status(422)
@@ -71,28 +63,31 @@ public class AiResource {
             }
 
             return Response.ok(new StepTwoModelCorrectionResponse(correctedModel, null)).build();
-        } catch (ClientWebApplicationException exception) {
-            return forwardUpstreamError(exception);
-        } catch (ProcessingException exception) {
-            LOG.error("AI service proxy failed", exception);
-            return Response.status(Response.Status.BAD_GATEWAY)
-                    .entity(unavailableError())
-                    .build();
+        } catch (RuntimeException exception) {
+            return aiError(exception);
         }
     }
 
-    private Response forwardUpstreamError(ClientWebApplicationException exception) {
-        Response upstream = exception.getResponse();
-        int status = upstream.getStatus();
-        MediaType mediaType = upstream.getMediaType() != null ? upstream.getMediaType() : MediaType.APPLICATION_JSON_TYPE;
-        String body = upstream.hasEntity() ? upstream.readEntity(String.class) : null;
-        upstream.close();
+    /**
+     * Sends the prompt carried by {@code payload.question} to Gemini and wraps the generated
+     * text in the {@code {"answer": ...}} envelope that downstream callers (and the frontend)
+     * already expect.
+     */
+    private JsonNode callGemini(JsonNode payload) {
+        String question = payload == null || payload.get("question") == null
+                ? ""
+                : payload.get("question").asText("");
+        String answer = geminiService.ask(question);
+        ObjectNode result = JsonNodeFactory.instance.objectNode();
+        result.put("answer", answer == null ? "" : answer);
+        return result;
+    }
 
-        Response.ResponseBuilder builder = Response.status(status).type(mediaType);
-        if (body != null && !body.isBlank()) {
-            builder.entity(body);
-        }
-        return builder.build();
+    private Response aiError(RuntimeException exception) {
+        LOG.error("AI generation failed", exception);
+        return Response.status(Response.Status.BAD_GATEWAY)
+                .entity(unavailableError())
+                .build();
     }
 
     private ObjectNode unavailableError() {
