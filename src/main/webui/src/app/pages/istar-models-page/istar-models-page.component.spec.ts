@@ -513,8 +513,64 @@ describe('IstarModelsPageComponent', () => {
     expect(component.safetyIntentionalElements().filter((element) => element.type === 'Hazard').length).toBe(3);
     expect(component.safetyIntentionalElements().filter((element) => element.type === 'SafetyTask').length).toBe(3);
     expect(component.safetyIntentionalElements().filter((element) => element.type === 'SafetyResource').length).toBe(3);
-    expect(aiFeedback.showSummary).toHaveBeenCalledTimes(8);
+    // The orchestrated sequence reports a single aggregated outcome - no per-section toasts.
+    expect(aiFeedback.showSummary).not.toHaveBeenCalled();
+    expect(aiFeedback.showError).not.toHaveBeenCalled();
     expect(aiFeedback.showSuccess).toHaveBeenCalledWith('Step 2 AI sequence completed successfully.', 7000);
+  });
+
+  it('keeps per-section AI failures silent during the Step 2 sequence and reports an accurate partial outcome', () => {
+    const fixture = TestBed.createComponent(IstarModelsPageComponent);
+    const component = fixture.componentInstance;
+
+    const validActorsResponse = {
+      payload: {
+        actors: [
+          { id: 'actor-001', text: 'Autonomous Shuttle', type: 'istar.Actor', x: 120, y: 120, customProperties: {}, nodes: [] },
+          { id: 'actor-002', text: 'Operations Center', type: 'istar.Role', x: 520, y: 140, customProperties: {}, nodes: [] },
+          { id: 'actor-003', text: 'Roadside Sensor Network', type: 'istar.Agent', x: 880, y: 180, customProperties: {}, nodes: [] }
+        ],
+        links: [],
+        display: {},
+        diagram: { name: 'project' }
+      },
+      summary: 'Added the main system actors.'
+    };
+
+    // After the actors are created, every other section returns a valid HTTP 200
+    // payload that introduces no new elements, so it fails the per-section count
+    // validation. This reproduces the reported scenario: the model IS updated by the
+    // sections that succeed, while a few sections cannot complete - and those must
+    // not surface as error snackbars.
+    const emptyPatchResponse = {
+      payload: { actors: [], links: [], display: {}, diagram: { name: 'project' } },
+      summary: 'No changes proposed.'
+    };
+
+    let callIndex = 0;
+    aiAssistant.askWithSummary.and.callFake(() => {
+      const response = callIndex === 0 ? validActorsResponse : emptyPatchResponse;
+      callIndex += 1;
+      return of(response);
+    });
+    spyOn<any>(component, 'applyModelObjectToPistar');
+
+    fixture.detectChanges();
+
+    component.generateStepTwoWithAi();
+    fixture.detectChanges();
+
+    expect(component.isGeneratingStepTwoAi()).toBeFalse();
+    expect(component.actors().length).toBe(3);
+    // No per-section toasts while the orchestrated sequence runs.
+    expect(aiFeedback.showSummary).not.toHaveBeenCalled();
+    expect(aiFeedback.showError).not.toHaveBeenCalled();
+    // The failed sections are retried once and then summarised in a single,
+    // accurate partial-success message.
+    expect(aiFeedback.showWarning).toHaveBeenCalledTimes(1);
+    expect(aiFeedback.showPartial).toHaveBeenCalledTimes(1);
+    const partialMessage = aiFeedback.showPartial.calls.mostRecent().args[0] as string;
+    expect(partialMessage).toContain('applied 1 of 8 sections');
   });
 
   it('accepts wrapped hazard AI patches and normalizes safety nodes to piStar safety types', () => {
@@ -953,5 +1009,169 @@ describe('IstarModelsPageComponent', () => {
     expect(component.isStepTwoSaveConfirmationModalOpen()).toBeFalse();
     expect(component.stepTwoSaveMessage()).toBe('Step 2 saved. Opening the next step.');
     expect(router.navigate).toHaveBeenCalledWith(['/control-structure'], { queryParams: { projectId: 2 } });
+  });
+
+  it('synthesizes a same-actor ObstructLink from hazard obstructsSafetyGoalIds and skips cross-actor obstructs', () => {
+    const fixture = TestBed.createComponent(IstarModelsPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const model = {
+      actors: [
+        {
+          id: 'actor-1',
+          text: 'Shuttle',
+          type: 'istar.Actor',
+          x: 0,
+          y: 0,
+          customProperties: {},
+          nodes: [
+            { id: 'sg-1', text: 'Prevent collisions', type: 'istar.SafetyGoal', x: 10, y: 10, customProperties: { safetyType: 'SafetyGoal' } },
+            {
+              id: 'haz-1',
+              text: 'Misses obstacle',
+              type: 'istar.Hazard',
+              x: 20,
+              y: 20,
+              customProperties: { safetyType: 'Hazard', obstructsSafetyGoalIds: ['sg-1', 'sg-2'] }
+            }
+          ]
+        },
+        {
+          id: 'actor-2',
+          text: 'Control Center',
+          type: 'istar.Role',
+          x: 400,
+          y: 0,
+          customProperties: {},
+          nodes: [{ id: 'sg-2', text: 'Maintain oversight', type: 'istar.SafetyGoal', x: 410, y: 10, customProperties: { safetyType: 'SafetyGoal' } }]
+        }
+      ],
+      dependencies: [],
+      links: [],
+      display: {},
+      tool: 'pistar.2.1.0',
+      istar: '2.0',
+      saveDate: 'Mon, 01 Jan 2024 00:00:00 GMT',
+      diagram: { width: 1200, height: 800, name: 'project', customProperties: {} }
+    };
+
+    const sanitized = component['sanitizePistarModelForImport'](model as any) as {
+      links: Array<{ id: string; type: string; source: string; target: string }>;
+    };
+
+    const obstructLinks = sanitized.links.filter((link) => link.type === 'istar.ObstructLink');
+    expect(obstructLinks.length).toBe(1);
+    expect(obstructLinks[0]).toEqual(jasmine.objectContaining({ source: 'haz-1', target: 'sg-1' }));
+    // The cross-actor obstruct (haz-1 -> sg-2) is not materialized because piStar requires a shared actor boundary.
+    expect(sanitized.links.some((link) => link.type === 'istar.ObstructLink' && link.target === 'sg-2')).toBeFalse();
+  });
+
+  it('remaps a colliding AI dependency id and keeps its DependencyLink endpoints pointing at the new id', () => {
+    const fixture = TestBed.createComponent(IstarModelsPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const baseModel = {
+      actors: [
+        {
+          id: 'actor-1',
+          text: 'Shuttle',
+          type: 'istar.Actor',
+          x: 0,
+          y: 0,
+          customProperties: {},
+          nodes: [{ id: 't-1', text: 'Plan route', type: 'istar.Task', x: 10, y: 10, customProperties: {} }]
+        },
+        { id: 'actor-2', text: 'Control Center', type: 'istar.Role', x: 400, y: 0, customProperties: {}, nodes: [] }
+      ],
+      dependencies: [
+        { id: 'dep-1', text: 'Existing dependum', type: 'istar.Goal', x: 200, y: 300, customProperties: {}, source: 'actor-1', target: 'actor-2' }
+      ],
+      links: [
+        { id: 'dep-1-in', type: 'istar.DependencyLink', source: 'actor-1', target: 'dep-1' },
+        { id: 'dep-1-out', type: 'istar.DependencyLink', source: 'dep-1', target: 'actor-2' }
+      ],
+      display: {},
+      tool: 'pistar.2.1.0',
+      istar: '2.0',
+      saveDate: 'Mon, 01 Jan 2024 00:00:00 GMT',
+      diagram: { width: 1200, height: 800, name: 'project', customProperties: {} }
+    };
+
+    const aiPatch = {
+      actors: [],
+      dependencies: [
+        { id: 'dep-1', text: 'Route schedule', type: 'istar.Resource', x: 220, y: 320, customProperties: {}, source: 't-1', target: 'actor-2' }
+      ],
+      links: [
+        { id: 'newdep-in', type: 'istar.DependencyLink', source: 't-1', target: 'dep-1' },
+        { id: 'newdep-out', type: 'istar.DependencyLink', source: 'dep-1', target: 'actor-2' }
+      ]
+    };
+
+    const normalized = component['normalizeAiModelPatchForMerge'](baseModel as any, aiPatch as any) as {
+      dependencies: Array<{ id: string; source?: string; target?: string }>;
+      links: Array<{ id: string; source: string; target: string }>;
+    };
+
+    const newDepId = normalized.dependencies[0]?.id;
+    expect(newDepId).not.toBe('dep-1');
+    expect(normalized.dependencies[0]?.source).toBe('t-1');
+    expect(normalized.dependencies[0]?.target).toBe('actor-2');
+    const inLink = normalized.links.find((link) => link.id === 'newdep-in');
+    const outLink = normalized.links.find((link) => link.id === 'newdep-out');
+    expect(inLink?.target).toBe(newDepId);
+    expect(outLink?.source).toBe(newDepId);
+  });
+
+  it('resolves an AI link endpoint that references an existing element by its display text', () => {
+    const fixture = TestBed.createComponent(IstarModelsPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const baseModel = {
+      actors: [
+        {
+          id: 'actor-1',
+          text: 'Shuttle',
+          type: 'istar.Actor',
+          x: 0,
+          y: 0,
+          customProperties: {},
+          nodes: [{ id: 'goal-1', text: 'Provide passenger transport', type: 'istar.Goal', x: 10, y: 10, customProperties: {} }]
+        }
+      ],
+      dependencies: [],
+      links: [],
+      display: {},
+      tool: 'pistar.2.1.0',
+      istar: '2.0',
+      saveDate: 'Mon, 01 Jan 2024 00:00:00 GMT',
+      diagram: { width: 1200, height: 800, name: 'project', customProperties: {} }
+    };
+
+    const aiPatch = {
+      actors: [
+        {
+          id: 'actor-1',
+          text: 'Shuttle',
+          type: 'istar.Actor',
+          x: 0,
+          y: 0,
+          customProperties: {},
+          nodes: [{ id: 'task-1', text: 'Drive route', type: 'istar.Task', x: 30, y: 30, customProperties: {} }]
+        }
+      ],
+      links: [{ id: 'ref-1', type: 'istar.AndRefinementLink', source: 'task-1', target: 'Provide passenger transport' }]
+    };
+
+    const normalized = component['normalizeAiModelPatchForMerge'](baseModel as any, aiPatch as any, { allowExistingActorUpdates: true }) as {
+      links: Array<{ id: string; source: string; target: string }>;
+    };
+
+    const link = normalized.links.find((entry) => entry.id === 'ref-1');
+    expect(link?.source).toBe('task-1');
+    expect(link?.target).toBe('goal-1');
   });
 });

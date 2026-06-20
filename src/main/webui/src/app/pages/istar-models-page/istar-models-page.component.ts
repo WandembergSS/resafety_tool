@@ -722,6 +722,14 @@ export class IstarModelsPageComponent {
     options.setError(null);
     this.stepTwoSaveMessage.set(null);
 
+    // While the orchestrated "Generate with AI" sequence is running we suppress the
+    // per-section snackbars and inline banner. Each section either succeeds or fails
+    // silently and a single, aggregated outcome message is shown at the end. This
+    // keeps the feedback honest: the model genuinely updates for the sections that
+    // succeed, so we must not flash an error toast for every section that the AI
+    // could not complete while the run as a whole is making progress.
+    const suppressPerActionFeedback = this.isGeneratingStepTwoAi();
+
     return this.aiAssistant.askWithSummary({ question: options.question, context: options.context }).pipe(
       tap(({ payload, summary }) => {
         const parsedPatch = this.parsePistarModelFromAiResponse(payload);
@@ -748,15 +756,19 @@ export class IstarModelsPageComponent {
         this.syncFormsFromPistarModel(sanitizedModel);
         this.applyModelObjectToPistar(sanitizedModel);
         this.stepTwoSaveError.set(null);
-        this.stepTwoSaveMessage.set(options.successMessage);
+        if (!suppressPerActionFeedback) {
+          this.stepTwoSaveMessage.set(options.successMessage);
+          this.aiFeedback.showSummary(summary);
+        }
         options.closeModal();
-        this.aiFeedback.showSummary(summary);
       }),
       map(() => void 0),
       catchError((error) => {
         const message = error instanceof Error && error.message ? error.message : options.requestFailureMessage;
         options.setError(message);
-        this.aiFeedback.showError(message);
+        if (!suppressPerActionFeedback) {
+          this.aiFeedback.showError(message);
+        }
         if (message === options.requestFailureMessage) {
           console.error(`${options.errorLogLabel} via /api/ai/ask`, error);
         }
@@ -872,14 +884,14 @@ export class IstarModelsPageComponent {
         min: 3,
         max: 4,
         instructions:
-          'Step 2.2 threat identification: add Hazards as anti-goals that explicitly threaten the existing safety goals. Each new hazard must obstruct at least one concrete SafetyGoal already in the model.'
+          'Step 2.2 threat identification: add Hazards as anti-goals that explicitly threaten the existing safety goals. Each new hazard must obstruct at least one concrete SafetyGoal already in the model via customProperties.obstructsSafetyGoalIds, and must be placed inside the same actor boundary as that SafetyGoal so the obstruct link can render.'
       },
       {
         id: 'safetyTask',
         min: 3,
         max: 4,
         instructions:
-          'Step 2.4 hazard mitigation: add SafetyTask nodes that mitigate, monitor, or prevent the identified hazards or operationalize safety responsibilities. Connect them coherently to the surrounding safety reasoning using valid internal links.'
+          'Step 2.4 hazard mitigation: add SafetyTask nodes that mitigate, monitor, or prevent the identified hazards or operationalize safety responsibilities. Mitigate a hazard with a refinement link from the SafetyTask to that hazard, and place the safety task inside the same actor boundary as the hazard it mitigates so the mitigation link can render.'
       },
       {
         id: 'resource',
@@ -1125,11 +1137,34 @@ export class IstarModelsPageComponent {
     }
 
     if (result.failed.length === 8) {
-      this.aiFeedback.showError(`Step 2 AI sequence failed. Actions: ${result.failed.join(', ')}.`);
+      this.aiFeedback.showError(
+        `Step 2 AI sequence failed: no sections could be generated (${this.describeStepTwoAiActions(result.failed)}).`
+      );
       return;
     }
 
-    this.aiFeedback.showPartial(`Step 2 AI partial success. Failed actions: ${result.failed.join(', ')}.`);
+    const appliedCount = result.succeeded.length;
+    this.aiFeedback.showPartial(
+      `Step 2 AI partial success: applied ${appliedCount} of 8 sections to the model. ` +
+        `Could not complete: ${this.describeStepTwoAiActions(result.failed)}.`
+    );
+  }
+
+  private describeStepTwoAiActions(actions: StepTwoAiActionId[]): string {
+    const labels: Record<StepTwoAiActionId, string> = {
+      actors: 'actors',
+      goals: 'goals',
+      quality: 'qualities',
+      resource: 'resources',
+      safetyGoal: 'safety goals',
+      hazard: 'hazards',
+      safetyTask: 'safety tasks',
+      safetyResource: 'safety resources'
+    };
+
+    return this.sortStepTwoAiActions(actions)
+      .map((action) => labels[action])
+      .join(', ');
   }
 
   submitAddActorsAiRequest(): void {
@@ -2096,6 +2131,23 @@ And it must also include these two links in links:
 Quality bar for this response:
 At least half of the newly added elements must be connected by a valid internal link or dependency unless the current model truly lacks enough context.
 
+Connected safety reasoning chain (iStar4Safety):
+Model the safety story as one connected chain instead of isolated nodes:
+1. A SafetyGoal states a safety objective, as a Safety Constraint (SC-xx) or a Responsibility (R-xx).
+2. A Hazard is an unsafe control action, loss scenario, or hazardous condition that threatens a SafetyGoal. Express this threat by setting the hazard customProperties.obstructsSafetyGoalIds to the exact id (or ids) of the SafetyGoal it obstructs, copied verbatim from the model snapshot. The application turns these ids into the visible obstruct link, so a hazard with an empty or invalid obstructsSafetyGoalIds will look disconnected.
+3. A coarse Hazard can be refined into finer Hazards with a refinement link whose source is the finer hazard and whose target is the coarser hazard. The hazard that carries the obstructsSafetyGoalIds sits at the top of this hazard tree; finer child hazards must not also set obstructsSafetyGoalIds.
+4. A SafetyTask mitigates a Hazard. Express mitigation with a refinement link whose source is the SafetyTask and whose target is the leaf Hazard it controls. Use OR refinement when any single safety task is sufficient and AND refinement when several are jointly required.
+5. A SafetyResource consumed by a safety task or hazard control is attached with a needed-by link whose source is the SafetyResource.
+
+Same-actor co-location rule (critical for visible links):
+1. Obstruct, refinement (including mitigation), qualification, contribution, and needed-by links are only valid and only render when their two endpoints live inside the same actor boundary.
+2. Therefore place every element of one safety reasoning chain in the same actor: a SafetyGoal, the Hazards that obstruct it, and the SafetyTasks and SafetyResources that mitigate or support those hazards must share one actor's nodes array.
+3. Use a social dependency, never a safety or internal link, whenever the relationship must cross actor boundaries.
+
+Reference discipline for connections (critical):
+1. When you connect a new element to an element that already exists in the snapshot, reuse that element's exact existing id as the link, dependency, or obstructsSafetyGoalIds endpoint. Never invent a new id for an element that already exists, and never reference an existing element only by its display text.
+2. Before returning, verify that every link source, every link target, every dependency source, every dependency target, and every obstructsSafetyGoalIds entry resolves to a real id that exists in the merged model.
+
 ${this.buildFullPistarValidationRuleSet()}`;
   }
 
@@ -2454,7 +2506,9 @@ Reference Rules for Hazards (MUST OBEY):
 - A hazard node must use type "istar.Hazard".
 - Every new hazard must set customProperties.safetyType to "Hazard".
 - Every new hazard must set customProperties.traceabilityId and it must match H<number> or UCA-xx.
-- Every new hazard must set customProperties.obstructsSafetyGoalIds to an array with at least one valid SafetyGoal id.
+- Every new hazard must set customProperties.obstructsSafetyGoalIds to an array with at least one SafetyGoal id, and each id must be copied verbatim from a SafetyGoal id in the snapshot below. Do not reference safety goals by their text and do not invent new ids.
+- Place each hazard inside the SAME actor boundary as the SafetyGoal it obstructs. The obstruct link only renders when the hazard and the safety goal share one actor, so a hazard placed in a different actor from its safety goal will appear disconnected.
+- When two or more hazards refine the same broader hazard, return a refinement link with the finer hazard as source and the broader hazard as target inside the same actor, and keep obstructsSafetyGoalIds only on the broader hazard.
 - Do not add standard Goal, Task, Resource, or Quality nodes as the primary additions in this Hazard operation.
 - Do not add SafetyGoal, SafetyTask, or SafetyResource nodes unless the user explicitly asked to update an existing related structure.
 - Do not create new actors. Update existing actors only.
@@ -2498,6 +2552,9 @@ Reference Rules for Safety Tasks (MUST OBEY):
 - A safety task node must use type "istar.SafetyTask".
 - Every new safety task must set customProperties.safetyType to "SafetyTask".
 - Every new safety task must set customProperties.traceabilityId and it must match R-xx.
+- Each new safety task should mitigate at least one existing Hazard. Express mitigation with a refinement link whose source is the new SafetyTask and whose target is the Hazard it controls, reusing that hazard's exact id from the snapshot. Attach the safety task to a leaf hazard, that is a hazard that is not itself refined into finer hazards.
+- Place each safety task inside the SAME actor boundary as the Hazard it mitigates. The mitigation link only renders when the safety task and the hazard share one actor, so a safety task placed in a different actor from its hazard will appear disconnected.
+- When several safety tasks each independently mitigate the same hazard, OR-refine them; when they are jointly required, AND-refine them.
 - Do not add standard Goal, Task, Resource, or Quality nodes as the primary additions in this SafetyTask operation.
 - Do not create new actors. Update existing actors only.
 
@@ -2907,6 +2964,10 @@ Additional constraints for this run:
     };
   }
 
+  private normalizeEndpointText(value: string): string {
+    return value.trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
   private normalizeAiModelPatchForMerge(
     baseModel: PistarModel,
     aiPatch: PistarModelPatch,
@@ -2914,6 +2975,7 @@ Additional constraints for this run:
   ): PistarModelPatch {
     const actorIdMap = new Map<string, string>();
     const nodeIdMap = new Map<string, string>();
+    const dependencyIdMap = new Map<string, string>();
     const allowExistingActorUpdates = options?.allowExistingActorUpdates ?? false;
 
     const existingActorIds = new Set(baseModel.actors.map((actor) => actor.id));
@@ -2980,16 +3042,73 @@ Additional constraints for this run:
       };
     });
 
+    // Build a tolerant endpoint resolver so links/dependencies survive even when
+    // the AI references an existing element by its id OR by its display text.
+    const resolvableFinalIds = new Set<string>();
+    const textToFinalId = new Map<string, string>();
+    const ambiguousTexts = new Set<string>();
+    const indexEndpointText = (text: string | undefined, id: string): void => {
+      if (typeof text !== 'string') {
+        return;
+      }
+      const key = this.normalizeEndpointText(text);
+      if (!key || ambiguousTexts.has(key)) {
+        return;
+      }
+      const existing = textToFinalId.get(key);
+      if (existing !== undefined && existing !== id) {
+        textToFinalId.delete(key);
+        ambiguousTexts.add(key);
+        return;
+      }
+      textToFinalId.set(key, id);
+    };
+    const indexElementForResolution = (id: string, text: string | undefined): void => {
+      resolvableFinalIds.add(id);
+      indexEndpointText(text, id);
+    };
+    for (const actor of baseModel.actors) {
+      indexElementForResolution(actor.id, actor.text);
+      for (const node of actor.nodes ?? []) {
+        indexElementForResolution(node.id, node.text);
+      }
+    }
+    for (const dependency of baseModel.dependencies) {
+      indexElementForResolution(dependency.id, dependency.text);
+    }
+    for (const actor of actors) {
+      indexElementForResolution(actor.id, actor.text);
+      for (const node of actor.nodes ?? []) {
+        indexElementForResolution(node.id, node.text);
+      }
+    }
+
+    const resolveEndpoint = (rawEndpoint: string | undefined): string | undefined => {
+      if (typeof rawEndpoint !== 'string' || !rawEndpoint) {
+        return rawEndpoint;
+      }
+      const mapped = actorIdMap.get(rawEndpoint) ?? nodeIdMap.get(rawEndpoint) ?? dependencyIdMap.get(rawEndpoint);
+      if (mapped) {
+        return mapped;
+      }
+      if (resolvableFinalIds.has(rawEndpoint)) {
+        return rawEndpoint;
+      }
+      return textToFinalId.get(this.normalizeEndpointText(rawEndpoint)) ?? rawEndpoint;
+    };
+
     const dependencies = (aiPatch.dependencies ?? []).map((dependency) => {
       const nextDependencyId = usedNodeLikeIds.has(dependency.id)
         ? nextUniqueId(dependency.id, usedNodeLikeIds)
         : (usedNodeLikeIds.add(dependency.id), dependency.id);
+      dependencyIdMap.set(dependency.id, nextDependencyId);
+      indexElementForResolution(nextDependencyId, dependency.text);
 
       return {
         ...dependency,
         id: nextDependencyId,
-        source: dependency.source ? actorIdMap.get(dependency.source) ?? nodeIdMap.get(dependency.source) ?? dependency.source : dependency.source,
-        target: dependency.target ? actorIdMap.get(dependency.target) ?? nodeIdMap.get(dependency.target) ?? dependency.target : dependency.target
+        source: resolveEndpoint(dependency.source),
+        target: resolveEndpoint(dependency.target)
       };
     });
 
@@ -2998,8 +3117,8 @@ Additional constraints for this run:
       return {
         ...link,
         id: nextLinkId,
-        source: actorIdMap.get(link.source) ?? nodeIdMap.get(link.source) ?? link.source,
-        target: actorIdMap.get(link.target) ?? nodeIdMap.get(link.target) ?? link.target
+        source: resolveEndpoint(link.source) ?? link.source,
+        target: resolveEndpoint(link.target) ?? link.target
       };
     });
 
@@ -3054,16 +3173,91 @@ Additional constraints for this run:
         return actorIds.has(link.source) && actorIds.has(link.target);
       }
 
+      // istar.ObstructLink (Hazard -> SafetyGoal) is only valid inside a single actor boundary,
+      // so it is handled by the same-actor node check below alongside the other internal links.
       const sourceActorId = nodeOwnerById.get(link.source);
       const targetActorId = nodeOwnerById.get(link.target);
       return Boolean(sourceActorId && targetActorId && sourceActorId === targetActorId);
     });
 
+    const obstructLinks = this.synthesizeObstructLinks(model.actors, links);
+
     return {
       ...model,
       dependencies,
-      links
+      links: [...links, ...obstructLinks]
     };
+  }
+
+  /**
+   * Materializes istar.ObstructLink edges (Hazard -> SafetyGoal) from each hazard node's
+   * customProperties.obstructsSafetyGoalIds. The obstruct relationship is the backbone of the
+   * iStar4Safety reasoning structure, but piStar only renders relationships present in
+   * model.links. Without this synthesis the obstruct stays an invisible custom property and the
+   * generated model shows hazards and safety goals with no link between them.
+   */
+  private synthesizeObstructLinks(actors: PistarElement[], existingLinks: PistarLink[]): PistarLink[] {
+    const safetyGoalActorById = new Map<string, string>();
+    for (const actor of actors) {
+      for (const node of actor.nodes ?? []) {
+        if (this.isSafetyGoalNode(node)) {
+          safetyGoalActorById.set(node.id, actor.id);
+        }
+      }
+    }
+
+    if (safetyGoalActorById.size === 0) {
+      return [];
+    }
+
+    const existingObstructPairs = new Set(
+      existingLinks
+        .filter((link) => (link.type ?? '').toLowerCase().includes('obstruct'))
+        .map((link) => `${link.source}->${link.target}`)
+    );
+
+    const obstructLinks: PistarLink[] = [];
+    for (const actor of actors) {
+      for (const node of actor.nodes ?? []) {
+        if (!this.isHazardNode(node)) {
+          continue;
+        }
+
+        const obstructs = node.customProperties?.['obstructsSafetyGoalIds'];
+        if (!Array.isArray(obstructs)) {
+          continue;
+        }
+
+        for (const rawGoalId of obstructs) {
+          if (typeof rawGoalId !== 'string') {
+            continue;
+          }
+
+          const goalId = rawGoalId.trim();
+          // piStar only renders an obstruct link when the hazard and the safety goal it
+          // obstructs live inside the same actor boundary, so skip cross-actor references.
+          if (!goalId || safetyGoalActorById.get(goalId) !== actor.id) {
+            continue;
+          }
+
+          const pairKey = `${node.id}->${goalId}`;
+          if (existingObstructPairs.has(pairKey)) {
+            continue;
+          }
+          existingObstructPairs.add(pairKey);
+
+          obstructLinks.push({
+            id: `obstruct-${node.id}-${goalId}`,
+            type: 'istar.ObstructLink',
+            source: node.id,
+            target: goalId,
+            label: 'obstruct'
+          });
+        }
+      }
+    }
+
+    return obstructLinks;
   }
 
   private normalizePistarNodeType(type: string, customProperties?: Record<string, unknown>): string {
@@ -4160,6 +4354,8 @@ Additional correction requirements:
         target: targetId
       });
     });
+
+    links.push(...this.synthesizeObstructLinks(pistarActors, links));
 
     return {
       actors: pistarActors,

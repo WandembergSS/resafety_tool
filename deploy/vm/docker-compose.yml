@@ -1,0 +1,76 @@
+# Docker Compose deployment for the CIn VM (vm-resafetytool.cin.ufpe.br).
+#
+# Put this whole folder at /opt/docker/resafetytool on the VM (per CIn's rule that
+# apps live under /opt/docker). Two services:
+#
+#   app  - the unified Quarkus + Angular container (REST API + SPA + in-process
+#          Gemini AI). Listens on 8080 inside the container; published as host
+#          port 80 because the CIn reverse proxy fronts HTTPS at
+#          https://resafetytool.cin.ufpe.br and forwards to http (port 80).
+#   db   - PostgreSQL 16 with a named volume. NOT published to the host; only the
+#          app reaches it on the private compose network.
+#
+# Config/secrets come from ./.env (copy .env.example -> .env, then chmod 600 .env).
+# Compose reads ./.env automatically for ${VAR} interpolation AND injects it into
+# the app container via `env_file:`.
+#
+# Two build paths (decided by ./egress-probe.sh):
+#   A) Build on the VM (needs Docker Hub + Maven + npm + Red Hat egress):
+#        docker compose build app && docker compose up -d
+#   C) Build elsewhere and transfer the image (only needs the VPN):
+#        ./transfer-image.sh wss2@vm-resafetytool.cin.ufpe.br   # loads resafetytool:latest + postgres:16
+#        docker compose up -d            # uses the loaded image, does NOT rebuild
+
+services:
+  app:
+    # `build:` is used by `docker compose build` / `up --build` (path A).
+    # `image:` is the tag used directly when the image was transferred (path C);
+    # `docker compose up` (without --build) reuses it instead of rebuilding.
+    build:
+      context: ../..            # repo root: the folder that contains the Dockerfile
+      dockerfile: Dockerfile
+    image: resafetytool:latest
+    container_name: resafetytool-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # DB wiring -> the `db` service on the compose network. DB_JDBC_URL is left
+      # UNSET so application.properties uses its TCP fallback:
+      #   jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      DB_HOST: db
+      DB_PORT: "5432"
+      # PORT is left unset -> Quarkus listens on 8080 inside the container.
+    ports:
+      - "80:8080"               # host 80 (CIn proxy target) -> container 8080
+    healthcheck:
+      # /q/health/ready is provided by quarkus-smallrye-health and also reflects
+      # datasource readiness. curl ships in the UBI8 OpenJDK runtime image.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/q/health/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s         # allow Flyway V1..V8 + boot before first probe
+
+  db:
+    image: postgres:16
+    container_name: resafetytool-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:

@@ -140,6 +140,8 @@ export function buildPistarModelFromStepTwoPayload(
   const validEndpointIds = new Set<string>();
   const pistarActors: PistarNode[] = [];
   const links: PistarLink[] = [];
+  const safetyGoalActorById = new Map<string, string>();
+  const hazardObstructs: { hazardId: string; actorId: string; obstructs: string[] }[] = [];
 
   information.actors.forEach((actor, actorIndex) => {
     const actorId = readString(actor, ['id']);
@@ -161,6 +163,15 @@ export function buildPistarModelFromStepTwoPayload(
 
         const rawType = readString(element, ['type']) || 'Goal';
         const isSafety = SAFETY_ELEMENT_TYPES.has(rawType);
+
+        if (rawType === 'SafetyGoal') {
+          safetyGoalActorById.set(elementId, actorId);
+        } else if (rawType === 'Hazard') {
+          const obstructs = readStringArray(element, 'obstructs');
+          if (obstructs.length > 0) {
+            hazardObstructs.push({ hazardId: elementId, actorId, obstructs });
+          }
+        }
 
         return {
           id: elementId,
@@ -254,6 +265,30 @@ export function buildPistarModelFromStepTwoPayload(
       }
     }
   });
+
+  // Materialize istar.ObstructLink edges (Hazard -> SafetyGoal) from each hazard's obstructs ids.
+  // piStar only renders an obstruct link when both endpoints share one actor boundary, so cross-actor
+  // obstruct references are skipped here just like in the Step 2 editor.
+  const seenObstructPairs = new Set<string>();
+  for (const { hazardId, actorId, obstructs } of hazardObstructs) {
+    for (const goalId of obstructs) {
+      if (safetyGoalActorById.get(goalId) !== actorId) {
+        continue;
+      }
+      const pairKey = `${hazardId}->${goalId}`;
+      if (seenObstructPairs.has(pairKey)) {
+        continue;
+      }
+      seenObstructPairs.add(pairKey);
+      links.push({
+        id: `obstruct-${hazardId}-${goalId}`,
+        type: 'istar.ObstructLink',
+        source: hazardId,
+        target: goalId,
+        label: 'obstruct'
+      });
+    }
+  }
 
   const dependencies: PistarNode[] = [];
   information.dependencies.forEach((dependency, index) => {
