@@ -16,21 +16,9 @@ export class AuthInterceptor implements HttpInterceptor {
   constructor(private readonly authService: AuthService) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    // Public endpoints that must not receive Authorization headers.
-    // Some backends will reject requests if an unexpected/invalid Bearer token is present,
-    // even when the endpoint itself is permit-all.
-    const requestPath = this.getRequestPath(req.url);
-    const isFullProjectPublicEndpoint = /^\/api\/projects\/\d+\/full$/.test(requestPath);
-    const isPublicEndpoint =
-      requestPath === '/api/project-resume' ||
-      requestPath.startsWith('/api/project-resume/') ||
-      requestPath === '/api/projects/minimal-project-creation' ||
-      requestPath === '/api/projects/minimal-project-update' ||
-      isFullProjectPublicEndpoint;
-    if (isPublicEndpoint) {
-      return next.handle(req);
-    }
-
+    // The backend now relies on the authenticated user to decide which projects are
+    // visible/accessible, so the bearer token must be attached to every backend route
+    // (the API is permit-all with non-proactive auth, so a valid token is always safe).
     const token = this.authService.getAccessToken();
     if (!token) {
       return next.handle(req);
@@ -56,21 +44,6 @@ export class AuthInterceptor implements HttpInterceptor {
     }
 
     return next.handle(req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }));
-  }
-
-  private getRequestPath(url: string): string {
-    // Absolute URL: https://host/api/...
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      try {
-        return new URL(url).pathname;
-      } catch {
-        // Fall through to basic parsing.
-      }
-    }
-
-    // Relative URL: /api/...
-    const withoutQuery = url.split('?')[0] ?? url;
-    return withoutQuery;
   }
 }
 

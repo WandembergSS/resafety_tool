@@ -23,11 +23,11 @@ interface HelpTip {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HelpPageComponent {
-  readonly appTitle = 'resafety_tool';
+  readonly appTitle = 'RESafety Tool';
   readonly appSubtitle = '6-Step ReSafety Workflow';
 
   readonly intro =
-    'resafety_tool guides you through the ReSafety method to perform a structured safety analysis of a ' +
+    'RESafety Tool guides you through the ReSafety method to perform a structured safety analysis of a ' +
     'socio-technical system. You progress through six sequential steps, and each step builds on the ' +
     'artefacts produced in the previous one. AI assistance is available throughout to draft and refine ' +
     'content, which you can always review and edit before saving.';

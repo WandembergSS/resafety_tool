@@ -35,6 +35,12 @@ public class Project extends PanacheEntityBase {
     @Column(length = 40, nullable = false)
     public ProjectStatus status = ProjectStatus.PENDING;
 
+    @Column(name = "created_by", length = 120)
+    public String createdBy;
+
+    @Column(name = "shared", nullable = false)
+    public boolean shared = false;
+
     @Column(name = "created_at", nullable = false)
     public OffsetDateTime createdAt;
 

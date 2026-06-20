@@ -1,3 +1,4 @@
+import 'tslib';
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login-page.component.html',
-  styleUrl: './login-page.component.scss',
+  styleUrls: ['./login-page.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginPageComponent {
@@ -19,7 +20,7 @@ export class LoginPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
 
-  readonly appTitle = 'resafety_tool';
+  readonly appTitle = 'RESafety Tool';
   readonly status = signal<'idle' | 'submitting' | 'success'>('idle');
   readonly errorMessage = signal<string | null>(null);
 

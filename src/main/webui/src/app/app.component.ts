@@ -24,7 +24,7 @@ import { StepReviewAccessService } from './services/step-review-access.service';
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  readonly appTitle = 'resafety_tool';
+  readonly appTitle = 'RESafety Tool';
   readonly appSubtitle = '6-Step ReSafety Workflow';
   readonly navOpen = signal(false);
   readonly isNavigating = signal(false);

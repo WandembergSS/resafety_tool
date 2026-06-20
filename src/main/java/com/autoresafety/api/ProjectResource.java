@@ -29,6 +29,7 @@ import com.autoresafety.domain.Project;
 import com.autoresafety.domain.ProjectDocument;
 import com.autoresafety.domain.ProjectStatus;
 import com.autoresafety.persistence.ProjectRepository;
+import com.autoresafety.service.ProjectAccessService;
 import com.autoresafety.service.ProjectDocumentService;
 
 import io.quarkus.panache.common.Sort;
@@ -75,21 +76,52 @@ public class ProjectResource {
     @Inject
     ProjectDocumentService projectDocumentService;
 
+    @Inject
+    ProjectAccessService projectAccess;
+
+    /**
+     * Loads a project and ensures the current user is allowed to access it.
+     * Throws {@link NotFoundException} when the project does not exist or is not visible
+     * to the current user (the admin user and example/shared projects are always visible).
+     */
+    private Project requireAccessibleProject(Long id) {
+        Project project = repository.findByIdOptional(id).orElseThrow(NotFoundException::new);
+        projectAccess.assertCanAccess(project);
+        return project;
+    }
+
+    /**
+     * Loads a project and ensures the current user is allowed to modify it. Shared example
+     * projects are read-only for non-admin users.
+     */
+    private Project requireModifiableProject(Long id) {
+        Project project = repository.findByIdOptional(id).orElseThrow(NotFoundException::new);
+        projectAccess.assertCanModify(project);
+        return project;
+    }
+
     @GET
     public List<Project> list() {
-        return repository.listAll(Sort.by("name"));
+        if (projectAccess.isAdmin()) {
+            return repository.listAll(Sort.by("name"));
+        }
+        return repository.find(
+            "shared = true or createdBy = ?1",
+            Sort.by("name"),
+            projectAccess.currentUsername()
+        ).list();
     }
 
     @GET
     @Path("/{id}")
     public Project getById(@PathParam("id") Long id) {
-        return repository.findByIdOptional(id).orElseThrow(NotFoundException::new);
+        return requireAccessibleProject(id);
     }
 
     @GET
     @Path("/{id}/full")
     public ProjectDocumentDto getFullInformation(@PathParam("id") Long id) {
-        Project project = repository.findByIdOptional(id).orElseThrow(NotFoundException::new);
+        Project project = requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
 
         ProjectDocumentDto.ProjectDto projectInfo = document == null || document.getProject() == null
@@ -129,6 +161,7 @@ public class ProjectResource {
     @GET
     @Path("/step_one_project_information/{id}")
     public StepOneProjectInformationDto getStepOneInformation(@PathParam("id") Long id) {
+        requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
         if (document == null) {
             throw new NotFoundException();
@@ -155,6 +188,7 @@ public class ProjectResource {
     @GET
     @Path("/step_two_project_information/{id}")
     public ProjectDocumentDto.Step2IstarDto getStepTwoInformation(@PathParam("id") Long id) {
+        requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
         if (document == null) {
             throw new NotFoundException();
@@ -176,6 +210,7 @@ public class ProjectResource {
     @Path("/step_two_project_update")
     @Transactional
     public Response updateStepTwo(@Valid StepTwoProjectUpdatePayload payload) {
+        requireModifiableProject(payload.id());
         ProjectDocumentDto document = projectDocumentService.getByProjectId(payload.id());
         if (document == null) {
             throw new NotFoundException();
@@ -302,6 +337,7 @@ public class ProjectResource {
     @GET
     @Path("/step_three_project_information/{id}")
     public ProjectDocumentDto.Step3ControlStructureDto getStepThreeInformation(@PathParam("id") Long id) {
+        requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
         if (document == null) {
             throw new NotFoundException();
@@ -321,6 +357,7 @@ public class ProjectResource {
     @GET
     @Path("/step_four_project_information/{id}")
     public ProjectDocumentDto.Step4UcasDto getStepFourInformation(@PathParam("id") Long id) {
+        requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
         if (document == null) {
             throw new NotFoundException();
@@ -340,7 +377,7 @@ public class ProjectResource {
     @GET
     @Path("/step_five_project_information/{id}")
     public StepFiveProjectInformationDto getStepFiveInformation(@PathParam("id") Long id) {
-        repository.findByIdOptional(id).orElseThrow(NotFoundException::new);
+        requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
         return buildStepFiveInformation(id, document);
     }
@@ -354,7 +391,7 @@ public class ProjectResource {
             throw new BadRequestException("id is required");
         }
 
-        repository.findByIdOptional(projectId).orElseThrow(NotFoundException::new);
+        requireModifiableProject(projectId);
 
         ProjectDocumentDto document = projectDocumentService.getByProjectId(projectId);
         if (document == null) {
@@ -420,6 +457,7 @@ public class ProjectResource {
     @GET
     @Path("/step_six_project_information/{id}")
     public ProjectDocumentDto.Step6LossScenariosDto getStepSixInformation(@PathParam("id") Long id) {
+        requireAccessibleProject(id);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(id);
         if (document == null) {
             throw new NotFoundException();
@@ -445,6 +483,8 @@ public class ProjectResource {
         if (projectId == null) {
             throw new BadRequestException("id is required");
         }
+
+        requireModifiableProject(projectId);
 
         ProjectDocumentDto document = projectDocumentService.getByProjectId(projectId);
         if (document == null) {
@@ -532,6 +572,7 @@ public class ProjectResource {
     }
 
     private Response updateStepFourById(Long projectId, StepFourProjectUpdatePayload.Step4Information step4Information) {
+        requireModifiableProject(projectId);
         ProjectDocumentDto document = projectDocumentService.getByProjectId(projectId);
         if (document == null) {
             throw new NotFoundException();
@@ -623,6 +664,7 @@ public class ProjectResource {
     @Path("/step_one_project_update")
     @Transactional
     public Response updateStepOne(@Valid StepOneProjectUpdatePayload payload) {
+        requireModifiableProject(payload.id());
         ProjectDocumentDto document = projectDocumentService.getByProjectId(payload.id());
         if (document == null) {
             throw new NotFoundException();
@@ -674,6 +716,7 @@ public class ProjectResource {
     @Path("/step_three_project_update")
     @Transactional
     public Response updateStepThree(@Valid StepThreeProjectUpdatePayload payload) {
+        requireModifiableProject(payload.id());
         ProjectDocumentDto document = projectDocumentService.getByProjectId(payload.id());
         if (document == null) {
             throw new NotFoundException();
@@ -1217,6 +1260,8 @@ public class ProjectResource {
         project.name = payload.name();
         project.description = payload.description();
         project.status = payload.status();
+        project.createdBy = projectAccess.currentUsername();
+        project.shared = false;
         repository.persist(project);
 
         ProjectDocumentDto.ProjectDto projectInfo = ProjectDocumentDto.ProjectDto.builder()
@@ -1242,6 +1287,8 @@ public class ProjectResource {
         Project project = new Project();
         project.name = payload.getName();
         project.description = payload.getDescription();
+        project.createdBy = projectAccess.currentUsername();
+        project.shared = false;
         repository.persist(project);
 
         ProjectDocumentDto.ProjectDto projectInfo = ProjectDocumentDto.ProjectDto.builder()
@@ -1278,7 +1325,7 @@ public class ProjectResource {
     @PermitAll
     @Transactional
     public Response updateMinimalStatus(@Valid ProjectStatusUpdatePayload payload) {
-        Project project = repository.findByIdOptional(payload.id()).orElseThrow(NotFoundException::new);
+        Project project = requireModifiableProject(payload.id());
         ProjectStatus previousStatus = project.status;
         String requestedStatus = payload.status();
         if (requestedStatus != null && requestedStatus.equalsIgnoreCase("REMOVED")) {
@@ -1343,7 +1390,7 @@ public class ProjectResource {
     @Path("/{id}")
     @Transactional
     public Project update(@PathParam("id") Long id, @Valid ProjectPayload payload) {
-        Project project = repository.findByIdOptional(id).orElseThrow(NotFoundException::new);
+        Project project = requireModifiableProject(id);
         project.name = payload.name();
         project.description = payload.description();
         project.status = payload.status();
@@ -1354,6 +1401,7 @@ public class ProjectResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") Long id) {
+        requireModifiableProject(id);
         ProjectDocument.delete("project.id", id);
         boolean deleted = repository.deleteById(id);
         if (!deleted) {

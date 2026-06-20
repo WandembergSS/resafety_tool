@@ -6,7 +6,7 @@
 -- alter sequence myentity_seq restart with 4;
 
 -- Sample project with full document seeded by ProjectDocumentDevSeed (Project ID = 1)
-INSERT INTO project (id, name, description, status, created_at, updated_at)
-VALUES (1, 'Chapter Case Study Project', 'Complete STPA chapter case for application', 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO project (id, name, description, status, shared, created_at, updated_at)
+VALUES (1, 'Chapter Case Study Project', 'Complete STPA chapter case for application', 'PENDING', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 ALTER SEQUENCE project_seq RESTART WITH 2;

@@ -71,17 +71,17 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should have the resafety_tool title', () => {
+  it('should have the RE title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.appTitle).toEqual('resafety_tool');
+    expect(app.appTitle).toEqual('RESafety Tool');
   });
 
   it('should render title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('resafety_tool');
+    expect(compiled.querySelector('h1')?.textContent).toContain('RESafety Tool');
   });
 
   it('hides the lateral menu on the dashboard even when query params are preserved', fakeAsync(() => {

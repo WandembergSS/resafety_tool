@@ -7,6 +7,7 @@ import com.autoresafety.domain.ProjectDocument;
 import com.autoresafety.domain.ProjectStatus;
 import com.autoresafety.persistence.ProjectDocumentRepository;
 import com.autoresafety.persistence.ProjectRepository;
+import com.autoresafety.service.ProjectAccessService;
 import io.quarkus.panache.common.Sort;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
@@ -30,9 +31,18 @@ public class ProjectResumeResource {
     @Inject
     ProjectDocumentRepository projectDocumentRepository;
 
+    @Inject
+    ProjectAccessService projectAccess;
+
     @GET
     public List<ProjectResumeDto> listActiveResumes() {
-        List<Project> projects = projectRepository.listAll(Sort.by("name"));
+        List<Project> projects = projectAccess.isAdmin()
+                ? projectRepository.listAll(Sort.by("name"))
+                : projectRepository.find(
+                        "shared = true or createdBy = ?1",
+                        Sort.by("name"),
+                        projectAccess.currentUsername()
+                ).list();
         if (projects.isEmpty()) {
             return List.of();
         }
