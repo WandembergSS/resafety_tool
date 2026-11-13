@@ -1,19 +1,19 @@
 /*
 * The Actor, Role, and Agent shapes are structured as follows:
-	.element: the circle that represents the actor when collapsed
-	text: the text inside the circle, usually representing the name of the actor
-	.boundary: the container for the elements that go inside the actor
+    .element: the circle that represents the actor when collapsed
+    text: the text inside the circle, usually representing the name of the actor
+    .boundary: the container for the elements that go inside the actor
 
-	Additionally, Agent and Role also contain a path that distinguishes then from the generic Actor element
+    Additionally, Agent and Role also contain a path that distinguishes then from the generic Actor element
 
-	A rectangular boundary is used instead of the original circular boundary, to maximize the space available for drawing
+    A rectangular boundary is used instead of the original circular boundary, to maximize the space available for drawing
 */
 
 joint.shapes.istar.Actor = joint.dia.Element.extend({
     markup: '<g><rect class="boundary" /><circle class="element actorSymbol" /><path /><text class="content"/></g>',
     defaults: joint.util.deepSupplement({
         type: 'Container',
-        size: {width: 200, height: 120},
+        size: { width: 200, height: 120 },
         attrs: {
             '.element': {
                 cx: 40,
@@ -53,7 +53,7 @@ joint.shapes.istar.Role = joint.dia.Element.extend({
     markup: '<g><rect class="boundary" /><circle class="element actorSymbol" /><path class="actorDecorator"/><text class="content"/></g>',
     defaults: joint.util.deepSupplement({
         type: 'Container',
-        size: {width: 200, height: 120},
+        size: { width: 200, height: 120 },
         attrs: {
             '.element': {
                 cx: 40,
@@ -99,7 +99,7 @@ joint.shapes.istar.Agent = joint.dia.Element.extend({
     markup: '<g><rect class="boundary"/><circle class="element actorSymbol"/><path class="actorDecorator"/><text class="content"/></g>',
     defaults: joint.util.deepSupplement({
         type: 'Container',
-        size: {width: 200, height: 120},
+        size: { width: 200, height: 120 },
         attrs: {
             '.element': {
                 cx: 40,
@@ -148,7 +148,7 @@ joint.shapes.istar.Goal = joint.shapes.basic.Rect.extend({
     markup: '<g class="scalable"><rect class="element"/></g><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'Goal',
-        size: {width: 90, height: 35},
+        size: { width: 90, height: 35 },
         attrs: {
             rect: {
                 fill: 'rgb(205,254,205)',
@@ -172,7 +172,7 @@ joint.shapes.istar.Resource = joint.shapes.basic.Rect.extend({
     markup: '<g class="scalable"><rect class="element"/></g><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'Resource',
-        size: {width: 90, height: 35},
+        size: { width: 90, height: 35 },
         attrs: {
             rect: {
                 fill: 'rgb(205,254,205)',
@@ -196,7 +196,7 @@ joint.shapes.istar.Task = joint.shapes.basic.Polygon.extend({
     markup: '<g class="scalable"><polygon class="element"/></g><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'Task',
-        size: {width: 95, height: 36},
+        size: { width: 95, height: 36 },
         attrs: {
             'polygon': {
                 fill: 'rgb(205,254,205)',
@@ -221,7 +221,7 @@ joint.shapes.istar.Hazard = joint.shapes.basic.Rect.extend({
     markup: '<g class="scalable"><rect class="element"/></g><text class="stereotype"/><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'Hazard',
-        size: {width: 90, height: 35},
+        size: { width: 90, height: 35 },
         attrs: {
             rect: {
                 fill: 'rgb(250,25,25)',
@@ -232,7 +232,7 @@ joint.shapes.istar.Hazard = joint.shapes.basic.Rect.extend({
                 'vector-effect': 'non-scaling-stroke', /* prevents stroke distortion when the element is resized */
                 width: 130
             },
-			'.stereotype': {
+            '.stereotype': {
                 fill: 'white',
                 'font-family': 'Arial, helvetica, sans-serif',
                 'font-size': 10,
@@ -246,7 +246,7 @@ joint.shapes.istar.Hazard = joint.shapes.basic.Rect.extend({
             },
             text: {
                 'font-size': 12,
-				fill: 'white',
+                fill: 'white',
                 'font-weight': 'bold',
                 text: 'Hazard'
             }
@@ -258,7 +258,7 @@ joint.shapes.istar.SafetyGoal = joint.shapes.basic.Rect.extend({
     markup: '<g class="scalable"><rect class="element"/></g><text class="stereotype"/><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'SafetyGoal',
-        size: {width: 90, height: 35},
+        size: { width: 90, height: 35 },
         attrs: {
             rect: {
                 fill: 'rgb(250,167,167)',
@@ -269,7 +269,7 @@ joint.shapes.istar.SafetyGoal = joint.shapes.basic.Rect.extend({
                 'vector-effect': 'non-scaling-stroke', /* prevents stroke distortion when the element is resized */
                 width: 130
             },
-			'.stereotype': {
+            '.stereotype': {
                 fill: 'black',
                 'font-family': 'Arial, helvetica, sans-serif',
                 'font-size': 10,
@@ -294,7 +294,7 @@ joint.shapes.istar.SafetyResource = joint.shapes.basic.Rect.extend({
     markup: '<g class="scalable"><rect class="element"/></g><text class="stereotype"/><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'SafetyResource',
-        size: {width: 95, height: 40},
+        size: { width: 95, height: 40 },
         attrs: {
             rect: {
                 fill: 'rgb(250,167,167)',
@@ -305,7 +305,7 @@ joint.shapes.istar.SafetyResource = joint.shapes.basic.Rect.extend({
                 'vector-effect': 'non-scaling-stroke', /* prevents stroke distortion when the element is resized */
                 width: 130
             },
-			'.stereotype': {
+            '.stereotype': {
                 fill: 'black',
                 'font-family': 'Arial, helvetica, sans-serif',
                 'font-size': 10,
@@ -330,7 +330,7 @@ joint.shapes.istar.SafetyTask = joint.shapes.basic.Polygon.extend({
     markup: '<g class="scalable"><polygon class="element"/></g><text class="stereotype"/><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'SafetyTask',
-        size: {width: 95, height: 36},
+        size: { width: 95, height: 36 },
         attrs: {
             'polygon': {
                 fill: 'rgb(250,167,167)',
@@ -341,7 +341,7 @@ joint.shapes.istar.SafetyTask = joint.shapes.basic.Polygon.extend({
                 'vector-effect': 'non-scaling-stroke', /* prevents stroke distortion when the element is resized */
                 width: 130
             },
-			'.stereotype': {
+            '.stereotype': {
                 fill: 'black',
                 'font-family': 'Arial, helvetica, sans-serif',
                 'font-size': 10,
@@ -367,7 +367,7 @@ joint.shapes.istar.Quality = joint.shapes.basic.Path.extend({
     markup: '<g class="scalable"><path class="element"/></g><text class="content"/>',
     defaults: joint.util.deepSupplement({
         type: 'Quality',
-        size: {width: 90, height: 55},
+        size: { width: 90, height: 55 },
         attrs: {
             'path': {
                 d: 'm 60.637955,-4.0358 c 17.5174,2.2042 29.9953,-10.69554 41.892705,-4.7858 22.34142,10.8714 11.2203,43.7743 -2.25,47.7322 -8.276505,2.9084 -13.960205,5.1934 -46.142805,-2.1786 -6.7454,-2.2317 -28.2652,6.0799 -35.4643,4.7143 C 9.072156,39.4809 6.491756,33.7693 3.744956,28.482 c -6.3069,-15.1266 -2.5738,-28.0439 7.981099,-34.7856 10.5549,-6.74179 27.9316,-7.30796 48.9119,2.2678 z',
@@ -436,8 +436,8 @@ joint.shapes.istar.ParticipatesInLink = joint.dia.Link.define('ParticipatesInLin
                 // },
             }
         },
-        source: {selector: '.actorSymbol'},
-        target: {selector: '.actorSymbol'}
+        source: { selector: '.actorSymbol' },
+        target: { selector: '.actorSymbol' }
     },
     {
         markup: [
@@ -501,8 +501,8 @@ joint.shapes.istar.IsALink = joint.dia.Link.define('IsALink',
                 y: 4,
             }
         },
-        source: {selector: '.actorSymbol'},
-        target: {selector: '.actorSymbol'}
+        source: { selector: '.actorSymbol' },
+        target: { selector: '.actorSymbol' }
     },
     {
         markup: [
@@ -528,51 +528,51 @@ joint.shapes.istar.IsALink = joint.dia.Link.define('IsALink',
 );
 
 joint.shapes.istar.DependencyLink = joint.dia.Link.define('DependencyLink',
-{
-    attrs: {
-        line: {
-            connection: true,
-            fill: 'none',
-            stroke: 'black',
-            'stroke-width': 1
+    {
+        attrs: {
+            line: {
+                connection: true,
+                fill: 'none',
+                stroke: 'black',
+                'stroke-width': 1
+            },
+            'connection-wrap': {
+                connection: true,
+                fill: 'none',
+                stroke: 'transparent',
+                'stroke-linecap': 'round',
+                'stroke-width': 20
+            },
+            label: {
+                atConnectionRatio: 0.5,
+                d: 'm 0,-10 l 0,20 4,0 c 10,0, 10 -20, 0,-20 l -4,0',
+                // d: 'm 0,-10 l 0,20 c 15,2, 15 -22, 0,-20',
+                // d: 'm 0,-10 l 0,20 q 15 -10, 0,-20',
+                fill: 'white',
+                // fill: 'none',
+                stroke: 'black',
+                'stroke-width': 2,
+            }
         },
-        'connection-wrap': {
-            connection: true,
-            fill: 'none',
-            stroke: 'transparent',
-            'stroke-linecap': 'round',
-            'stroke-width': 20
-        },
-        label: {
-            atConnectionRatio: 0.5,
-            d: 'm 0,-10 l 0,20 4,0 c 10,0, 10 -20, 0,-20 l -4,0',
-            // d: 'm 0,-10 l 0,20 c 15,2, 15 -22, 0,-20',
-            // d: 'm 0,-10 l 0,20 q 15 -10, 0,-20',
-            fill: 'white',
-            // fill: 'none',
-            stroke: 'black',
-            'stroke-width': 2,
-        }
+        source: { selector: 'text' },
+        target: { selector: 'text' }
     },
-    source: {selector: 'text'},
-    target: {selector: 'text'}
-},
-{
-    markup: [
-        {
-            className: 'c-connection-wrap',
-            selector: 'connection-wrap',
-            tagName: 'path'
-        },
-        {
-            selector: 'line',
-            tagName: 'path'
-        },
-        {
-            selector: 'label',
-            tagName: 'path'
-        }]
-}
+    {
+        markup: [
+            {
+                className: 'c-connection-wrap',
+                selector: 'connection-wrap',
+                tagName: 'path'
+            },
+            {
+                selector: 'line',
+                tagName: 'path'
+            },
+            {
+                selector: 'label',
+                tagName: 'path'
+            }]
+    }
 );
 
 joint.shapes.istar.AndRefinementLink = joint.dia.Link.define('AndRefinementLink',
@@ -624,7 +624,7 @@ joint.shapes.istar.OrRefinementLink = joint.dia.Link.define('OrRefinementLink',
                 'stroke-width': 1,
                 targetMarker: {
                     'd': 'm 12,-6 l -12,6 12,6 z',
-                     fill: 'black',
+                    fill: 'black',
                     'stroke-width': 1.2,
                     'type': 'path',
                 }
@@ -662,7 +662,7 @@ joint.shapes.istar.NeededByLink = joint.dia.Link.define('NeededByLink',
                 stroke: 'black',
                 'stroke-width': 1,
                 targetMarker: {
-                    d:    'm 1, 0         a 4,4 0 1,0 8,0         a 4,4 0 1,0 -8,0',
+                    d: 'm 1, 0         a 4,4 0 1,0 8,0         a 4,4 0 1,0 -8,0',
                     fill: 'black',
                     stroke: 'black',
                     type: 'path', //using path instead of circle to correctly position the circle
@@ -739,8 +739,8 @@ joint.shapes.istar.ContributionLink = joint.dia.Link.define('ContributionLink',
                 }
             }
         ],
-        source: {selector: 'circle'},
-        target: {selector: 'circle'}
+        source: { selector: 'circle' },
+        target: { selector: 'circle' }
     },
     {
         markup: [
@@ -830,8 +830,8 @@ joint.shapes.istar.ObstructLink = joint.dia.Link.define('ObstructLink',
                 }
             }
         ],
-        source: {selector: 'circle'},
-        target: {selector: 'circle'}
+        source: { selector: 'circle' },
+        target: { selector: 'circle' }
     },
     {
         markup: [

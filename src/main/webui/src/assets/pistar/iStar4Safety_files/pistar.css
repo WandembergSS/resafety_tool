@@ -3,8 +3,9 @@
  */
 
 body {
-  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif,'Apple Color Emoji',
-  'Segoe UI Emoji','Segoe UI Symbol'; /* based on Bootstrap 4 font*/
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol';
+  /* based on Bootstrap 4 font*/
 }
 
 #tool {
@@ -20,7 +21,7 @@ body {
   flex-direction: row;
   flex-grow: 1;
   flex-wrap: wrap;
-  height:100%;
+  height: 100%;
   overflow: auto;
   min-height: 1px;
 }
@@ -91,7 +92,8 @@ https://stackoverflow.com/questions/7492062/css-overflow-scroll-always-show-vert
   padding: 0 50px;
 }
 
-#logo a, #logo a:hover {
+#logo a,
+#logo a:hover {
   color: rgb(252, 255, 239);
   text-decoration: none;
 }
@@ -279,7 +281,9 @@ kbd {
 
 /* JointJS markup */
 
-.boundary, .element, .content {
+.boundary,
+.element,
+.content {
   transition: fill 0.3s ease-out;
 }
 
@@ -315,11 +319,12 @@ svg * {
 
 #sidepanel {
   background-color: white;
-  box-shadow: 0 4px 10px rgb(100,100,100);
+  box-shadow: 0 4px 10px rgb(100, 100, 100);
   font-size: 1.2rem;
   min-height: 1px;
   overflow-x: auto;
-  overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+  overflow-y: auto;
+  /* Scrollable contents if viewport is shorter than content. */
   transition: width 0.5s, height 0.3s ease-in-out;
   z-index: 1;
   height: 100%;
@@ -356,7 +361,8 @@ svg * {
   margin-bottom: 0;
 }
 
-.editable-click, a.editable-click {
+.editable-click,
+a.editable-click {
   border: none;
 }
 
@@ -366,11 +372,13 @@ svg * {
 
 #properties-table textarea {
   font-size: 1.2rem;
-  padding: 3px; /* sets the padding inside the textarea */
-  width: 100%!important;
+  padding: 3px;
+  /* sets the padding inside the textarea */
+  width: 100% !important;
 }
 
-#properties-table .editable-container, .editable-container div{
+#properties-table .editable-container,
+.editable-container div {
   width: 100%;
 }
 
@@ -385,7 +393,8 @@ svg * {
 }
 
 #properties-table tr {
-  border: solid 2px white; /* hack to hide the table lines */
+  border: solid 2px white;
+  /* hack to hide the table lines */
 }
 
 #properties-table td {
@@ -421,6 +430,7 @@ svg * {
 .collapsed #regular-size-options {
   display: none;
 }
+
 #sidepanel.collapsed #regular-size-options {
   padding: 0;
 }
@@ -432,8 +442,10 @@ svg * {
 
 .collapsed .collapsed-size-options-area {
   display: block;
-  min-height: 1500px; /* hack to make the button fill the entire sidepanel */
-  min-width: 500px;   /* hack to make the button fill the entire sidepanel */
+  min-height: 1500px;
+  /* hack to make the button fill the entire sidepanel */
+  min-width: 500px;
+  /* hack to make the button fill the entire sidepanel */
   text-align: left;
 }
 
@@ -449,7 +461,7 @@ svg * {
   width: 2vw;
 }
 
-#collapsed-size-options-button a{
+#collapsed-size-options-button a {
   color: #246B29;
   text-decoration: none;
 }
@@ -458,9 +470,11 @@ svg * {
   display: none;
 }
 
-.collapsed .sidepanel-content, .collapsed  ul {
+.collapsed .sidepanel-content,
+.collapsed ul {
   display: none;
 }
+
 #sidepanel:hover #regular-size-options {
   opacity: 1.0;
 }
@@ -483,7 +497,8 @@ svg * {
   border: 3px dashed dimgrey;
   /*border: 4px dashed #1C5052;*/
   height: 0;
-  pointer-events: none;  /* based on https://stackoverflow.com/questions/3538489/html-css-make-a-div-invisible-to-clicks */
+  pointer-events: none;
+  /* based on https://stackoverflow.com/questions/3538489/html-css-make-a-div-invisible-to-clicks */
   position: absolute;
   width: 0;
   z-index: 1;
@@ -492,6 +507,7 @@ svg * {
 .flash-on {
   background-color: #246B29;
 }
+
 .flash-off {
   transition: background-color .3s ease-out;
 }

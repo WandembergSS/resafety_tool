@@ -175,14 +175,14 @@ istar.setupMetamodel = function (metamodel) {
 
             //if a 'isValid' function has not been defined, create a default
             //function that poses no constraint
-            if (! cellType.isValid) {
-                cellType.isValid = function () {return {isValid: true, message: ''};};
+            if (!cellType.isValid) {
+                cellType.isValid = function () { return { isValid: true, message: '' }; };
             }
             // cellType.isValid = function () {return {isValid: true, message: ''};}; //uncomment to remove all constraints
         }
     }
 
-    function createAddElementFunction (elementType) {
+    function createAddElementFunction(elementType) {
         //creates an 'add' function that can be used to create instances of this type
         //Example: if the cellType is Actor, an addActor() function will be created
         if (elementType.name) {
@@ -192,7 +192,7 @@ istar.setupMetamodel = function (metamodel) {
         }
     }
 
-    function createAddContainerLinkFunction (linkType) {
+    function createAddContainerLinkFunction(linkType) {
         istar['add' + linkType.name] = function (source, target) {
             if (istar.metamodel.containerLinks[linkType.name].isValid(source, target)) {
                 return istar.addLinkBetweenActors(linkType, source, target);
@@ -200,7 +200,7 @@ istar.setupMetamodel = function (metamodel) {
         };
     }
 
-    function createAddNodeLinkFunction (linkType) {
+    function createAddNodeLinkFunction(linkType) {
         istar['add' + linkType.name] = function (source, target, label) {
             if (istar.metamodel.nodeLinks[linkType.name].isValid(source, target)) {
                 return istar.addLinkBetweenNodes(linkType, source, target, label);
@@ -233,7 +233,7 @@ istar.setupMetamodel = function (metamodel) {
         };
     }
 
-    function setupNodeAttributesDefaultValues (elementType) {
+    function setupNodeAttributesDefaultValues(elementType) {
         //canBeInnerElement default value: false
         //canBeDependum default value: false
         //canBeOnPaper default value: true

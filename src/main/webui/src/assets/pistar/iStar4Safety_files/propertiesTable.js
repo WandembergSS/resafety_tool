@@ -96,7 +96,7 @@ ui.components.PropertiesTableView = Backbone.View.extend({
             showbuttons: 'bottom',
             success: function (response, newValue) {
                 currentElementModel.prop('name', newValue);
-                return {newValue: currentElementModel.prop('name')};
+                return { newValue: currentElementModel.prop('name') };
             }
         })
             .on('shown', function () {
@@ -113,8 +113,8 @@ ui.components.PropertiesTableView = Backbone.View.extend({
             var typeNames = [];
             var currentType = 0;
             var element = this.model;
-            _.forEach(istar.metamodel.nodes, function(nodeType, index) {
-                typeNames.push({value: index, text: nodeType.name});
+            _.forEach(istar.metamodel.nodes, function (nodeType, index) {
+                typeNames.push({ value: index, text: nodeType.name });
                 if (nodeType.name === element.prop('type')) {
                     currentType = index;
                 }
@@ -331,7 +331,7 @@ ui.components.PropertiesTableView = Backbone.View.extend({
         if (this.model.prop('backgroundColor')) {
             $('#single-element-color-picker').get(0).jscolor.fromString(this.model.prop('backgroundColor'));
         }
-        else if (ui.getSelectedCells()){
+        else if (ui.getSelectedCells()) {
             $('#single-element-color-picker').get(0).jscolor.fromString(ui.defaultElementBackgroundColor);
         }
     },
@@ -348,13 +348,13 @@ ui.components.PropertiesTableView = Backbone.View.extend({
         'use strict';
 
         $('#current' + propertyName).editable({
-                showbuttons: 'bottom',
-                success: function (response, newValue) {
-                    //update backbone model
-                    var updatedElement = ui.changeCustomPropertyValue(ui.getSelectedCells()[0], $(this).attr('data-name'), newValue);
-                    return {newValue: updatedElement.prop('customProperties/' + propertyName)};
-                }
+            showbuttons: 'bottom',
+            success: function (response, newValue) {
+                //update backbone model
+                var updatedElement = ui.changeCustomPropertyValue(ui.getSelectedCells()[0], $(this).attr('data-name'), newValue);
+                return { newValue: updatedElement.prop('customProperties/' + propertyName) };
             }
+        }
         )
             .on('shown', function () {
                 ui.states.editor.transitionTo(ui.states.editor.EDITING_TEXT);

@@ -1,5 +1,9 @@
 /*!
- * Embedded goal modeling editor component.
+ * This is open-source. Which means that you can contribute to it, and help
+ * make it better! Also, feel free to use, modify, redistribute, and so on.
+ *
+ * If you are going to edit the code, always work from the source-code available for download at
+ * https://github.com/jhcp/pistar
  */
 
 /* this function defines additional information that can be used in the UI, regarding elements and links of the metamodel
