@@ -1,0 +1,598 @@
+<section class="page">
+  <header class="page__header">
+    <div class="page__header-copy">
+      <p class="step">Step 3</p>
+      <div class="page__title-row">
+        <h2>Define the STPA Control Structure</h2>
+        <button type="button" class="button button--ai" [disabled]="isGeneratingStepThreeAi()" (click)="openStepThreeAiModal()" aria-label="Generate with AI">
+          <span class="button__icon" aria-hidden="true">
+            @if (isGeneratingStepThreeAi()) {
+              <span class="button__spinner"></span>
+            } @else {
+              <span class="ai-robot-icon" aria-hidden="true"></span>
+            }
+          </span>
+          <span>{{ isGeneratingStepThreeAi() ? 'Generating...' : 'Generate with AI' }}</span>
+        </button>
+        <button type="button" class="button button--secondary" (click)="openBpmnModelModal()">Bpmn and more details</button>
+      </div>
+      <p>
+        Following the ReSafety process, translate the social and goal-oriented iStar4Safety model into a functional
+        control structure. First classify the system entities, then define mandatory control actions, and finally add
+        optional feedback or high-resolution structural elements only where the analysis needs them.
+      </p>
+    </div>
+  </header>
+
+  <div class="page-actions">
+    <button type="button" class="button button--secondary" [disabled]="isSavingStepThree()" (click)="saveStepThree()">
+      {{ isSavingStepThree() ? 'Saving...' : 'Save' }}
+    </button>
+    <button type="button" class="button" [disabled]="isSavingStepThree()" (click)="saveStepThree(true)">
+      {{ isSavingStepThree() ? 'Saving...' : 'Save and Continue' }}
+    </button>
+  </div>
+
+  @if (stepThreeSaveMessage()) {
+    <div class="save-feedback save-feedback--success">
+      {{ stepThreeSaveMessage() }}
+    </div>
+  }
+
+  @if (stepThreeSaveError()) {
+    <div class="save-feedback save-feedback--error">
+      {{ stepThreeSaveError() }}
+    </div>
+  }
+
+  <section class="overview-strip" aria-label="Step 3 overview">
+    <article class="overview-card overview-card--primary">
+      <span class="overview-card__label">Defined entities</span>
+      <strong>{{ entityRoleCount() }}</strong>
+      <p>Controllers, controlled processes, and passive entities currently classified during entity definition.</p>
+    </article>
+    <article class="overview-card">
+      <span class="overview-card__label">Control actions</span>
+      <strong>{{ controlActions().length }}</strong>
+      <p>Mandatory control actions captured during control action definition.</p>
+    </article>
+    <article class="overview-card">
+      <span class="overview-card__label">Passive entities</span>
+      <strong>{{ passiveEntityCount() }}</strong>
+      <p>Targets that must be modeled through optional structure elements instead of as controller-issued actions.</p>
+    </article>
+    <article class="overview-card">
+      <span class="overview-card__label">Optional elements</span>
+      <strong>{{ optionalElementsCount() }}</strong>
+      <p>Additional feedback, sensors, actuators, or external inputs captured as optional structure elements.</p>
+    </article>
+  </section>
+
+  <section class="card">
+
+    <section class="form-section">
+      <div class="form-section__heading">
+        <span class="form-section__eyebrow">Entity classification · Step 3.1</span>
+        <h4>Define controllers and controlled processes</h4>
+        <p>Select an entity from the Step 1.1.5 system components and the updated SR actors, then classify how it behaves in the control structure.</p>
+      </div>
+
+      <form class="grid" [formGroup]="entityForm" (ngSubmit)="addEntity()">
+        <label class="field field--full">
+          <span>Entity name</span>
+          <select formControlName="entityName">
+            <option value="">Select a system component or actor</option>
+            @for (name of entityCatalog(); track name) {
+              <option [value]="name">{{ name }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="field field--full">
+          <span>Functional role(s)</span>
+          <div class="checkbox-grid">
+            @for (role of entityRoleOptions(); track role.role) {
+              <label class="checkbox-card">
+                <input
+                  type="checkbox"
+                  [formControlName]="role.controlName"
+                  [disabled]="role.controlName === 'controller' && !!entityForm.controls.passiveEntity.value"
+                  (change)="onEntityRoleChange(role.controlName, $any($event.target).checked)"
+                />
+                <div>
+                  <strong>{{ role.title }}</strong>
+                  <small>{{ role.description }}</small>
+                </div>
+              </label>
+            }
+          </div>
+        </div>
+
+        <div class="actions field--full">
+          <button type="submit">Save entity classification</button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>Roles</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entity of entities(); track entity.id) {
+              <tr>
+                <td>{{ entity.name }}</td>
+                <td>{{ roleLabel(entity) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section__heading">
+        <span class="form-section__eyebrow">Control action definition · Step 3.2</span>
+        <h4>Define control actions</h4>
+        <p>Capture the dependum as a mandatory control action, map the depender to the source controller, and map the dependee to the target controlled process.</p>
+      </div>
+
+      <form class="grid" [formGroup]="controlActionForm" (ngSubmit)="addControlAction()">
+        <label class="field">
+          <span>Control Action ID</span>
+          <input type="text" formControlName="ref" readonly />
+        </label>
+
+        <label class="field field--full">
+          <span>Control Action Name (Dependum)</span>
+          <input type="text" formControlName="action" [disabled]="!form2Ready()" placeholder="Derived directly from the SD-model dependum" />
+        </label>
+
+        <label class="field">
+          <span>Source Controller (Depender)</span>
+          <select formControlName="sourceController" [disabled]="!form2Ready()">
+            <option value="">Select a controller</option>
+            @for (entity of controllerEntities(); track entity.id) {
+              <option [value]="entity.name">{{ entity.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Target Controlled Process (Dependee)</span>
+          <select formControlName="targetProcess" [disabled]="!form2Ready()">
+            <option value="">Select a controlled process or passive entity</option>
+            @for (entity of controllableEntities(); track entity.id) {
+              <option [value]="entity.name">{{ entity.name }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field field--full">
+          <span>Associated Responsibility</span>
+          <select formControlName="responsibility" [disabled]="!form2Ready()">
+            <option value="">Link to a responsibility when available</option>
+            @for (item of responsibilitiesCatalog(); track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        </label>
+
+        @if (isSelectedTargetPassive()) {
+          <p class="notice-banner field--full">
+            Passive Entity guardrail: the selected target cannot receive a control action. Submitting this entry will redirect the interaction to the optional structure elements stage as Feedback.
+          </p>
+        }
+
+        <div class="actions field--full">
+          <button type="submit" [disabled]="!form2Ready()">
+            {{ editingControlActionId() ? 'Update control action' : 'Save control action' }}
+          </button>
+        </div>
+      </form>
+
+      @if (passiveTargetGuidance()) {
+        <p class="notice-banner">{{ passiveTargetGuidance() }}</p>
+      }
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Control Action</th>
+              <th>Source Controller</th>
+              <th>Target Process</th>
+              <th>Responsibility</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of controlActions(); track item.id) {
+              <tr>
+                <td>{{ item.ref }}</td>
+                <td>{{ item.action }}</td>
+                <td>{{ item.sourceController }}</td>
+                <td>{{ item.targetProcess }}</td>
+                <td>{{ item.responsibility }}</td>
+                <td class="table-actions">
+                  @if (editingControlActionId() === item.id) {
+                    <span class="editing-placeholder">editing...</span>
+                  } @else {
+                    <button type="button" class="icon-action" (click)="editControlAction(item)" aria-label="Edit control action" title="Edit">
+                      ✎
+                    </button>
+                    <button type="button" class="icon-action icon-action--danger" (click)="removeControlAction(item.id)" aria-label="Delete control action" title="Delete">
+                      🗑
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="form-section__heading">
+        <span class="form-section__eyebrow">Optional structure elements · Steps 3.3-3.8</span>
+        <h4>Define optional control structure elements</h4>
+        <p>Add feedback, process models, control algorithms, actuators, sensors, or external inputs only when they improve the fidelity of the later safety analysis.</p>
+      </div>
+
+      <form class="grid" [formGroup]="optionalElementForm" (ngSubmit)="addOptionalElement()">
+        <label class="field">
+          <span>Optional element type</span>
+          <select formControlName="type">
+            @for (item of optionalElementTypes(); track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field field--full">
+          <span>Element name / description</span>
+          <input type="text" formControlName="name" placeholder="Describe the structural element being added" />
+        </label>
+
+        <label class="field">
+          <span>Source / origin</span>
+          <select formControlName="source">
+            <option value="">Select the source</option>
+            @for (item of optionalSourceOptions(); track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Destination / target</span>
+          <select formControlName="destination">
+            <option value="">Select the destination</option>
+            @for (item of optionalDestinationOptions(); track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field field--full">
+          <span>Associated Responsibility</span>
+          <select formControlName="responsibility">
+            <option value="">Select a traceability link</option>
+            @for (item of responsibilitiesCatalog(); track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="actions field--full">
+          <button type="submit">Save optional element</button>
+        </div>
+      </form>
+
+      @if (optionalElementError()) {
+        <p class="notice-banner">{{ optionalElementError() }}</p>
+      }
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Name</th>
+              <th>Source</th>
+              <th>Destination</th>
+              <th>Responsibility</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of optionalElements(); track item.id) {
+              <tr>
+                <td>{{ item.type }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.source }}</td>
+                <td>{{ item.destination }}</td>
+                <td>{{ item.responsibility }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </section>
+
+  <section class="card card--diagram">
+    <div class="diagram__header-row">
+      <h3>Control structure sketch</h3>
+      <div class="diagram__header-actions">
+        <button type="button" class="button button--secondary" (click)="updateSketchPreview()">Update sketch</button>
+        @if (isSketchPreviewActive()) {
+          <button type="button" class="button button--secondary" (click)="clearSketchPreview()">Reset preview</button>
+        }
+      </div>
+    </div>
+    <p class="diagram__intro">
+      The sketch follows the STPA control-structure conventions from the reference material: higher-authority controllers are placed above, controller/process hybrids stay in the middle of the hierarchy, controlled processes stay below, and feedback returns upward.
+    </p>
+    @if (sketchPreviewMessage()) {
+      <p class="diagram__preview-note">{{ sketchPreviewMessage() }}</p>
+    }
+    <div class="diagram__legend" aria-label="Control structure legend">
+      <span class="diagram__legend-item"><span class="diagram__swatch diagram__swatch--controller"></span> Controller</span>
+      <span class="diagram__legend-item"><span class="diagram__swatch diagram__swatch--shared"></span> Controller / controlled process</span>
+      <span class="diagram__legend-item"><span class="diagram__swatch diagram__swatch--process"></span> Controlled process</span>
+      <span class="diagram__legend-item"><span class="diagram__line diagram__line--control"></span> Control action</span>
+      <span class="diagram__legend-item"><span class="diagram__line diagram__line--feedback"></span> Feedback / sensing</span>
+      <span class="diagram__legend-item"><span class="diagram__line diagram__line--optional"></span> Other information</span>
+    </div>
+    @if (hasSketchData()) {
+      <div class="diagram">
+        <svg
+          class="diagram__svg"
+          [attr.viewBox]="'0 0 ' + sketchCanvasWidth + ' ' + sketchCanvasHeight()"
+          preserveAspectRatio="xMidYMin meet"
+          role="img"
+          aria-label="Dynamic Step 3 control structure diagram"
+        >
+          <defs>
+            <marker id="arrow-control" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f172a"></path>
+            </marker>
+            <marker id="arrow-feedback" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"></path>
+            </marker>
+            <marker id="arrow-optional" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0ea5e9"></path>
+            </marker>
+          </defs>
+
+          @for (band of sketchTierBands(); track band.id) {
+            <g [attr.class]="'tier-band tier-band--' + band.kind">
+              <rect x="72" [attr.y]="band.y" [attr.width]="1088" [attr.height]="band.height" rx="18" ry="18"></rect>
+              <text class="tier-band__label" x="100" [attr.y]="band.y + 28">{{ band.label }}</text>
+            </g>
+          }
+
+          @if (sketchHasExternalContext()) {
+            <text class="tier-band__label tier-band__label--external" x="1035" y="70">External context / other inputs</text>
+          }
+
+          @for (edge of sketchEdgeGeometries(); track edge.id) {
+            <g>
+              <path
+                [attr.class]="edge.cssClass"
+                [attr.d]="edge.path"
+                [attr.marker-end]="edge.marker"
+              ></path>
+              <text class="edge-label" [attr.x]="edge.labelX" [attr.y]="edge.labelY">{{ edge.label }}</text>
+            </g>
+          }
+
+          @for (node of sketchNodes(); track node.id) {
+            <g [attr.class]="'node node--' + node.kind">
+              <rect
+                [attr.x]="node.x"
+                [attr.y]="node.y"
+                [attr.width]="node.width"
+                [attr.height]="node.height"
+                rx="10"
+                ry="10"
+              ></rect>
+              @if (node.kind === 'shared') {
+                <text class="node-role-hint" [attr.x]="node.x + node.width / 2" [attr.y]="node.y + 18">Controller / Process</text>
+              }
+              <text
+                class="node-label"
+                [attr.x]="node.x + node.width / 2"
+                [attr.y]="node.y + node.height / 2 - ((node.lines.length - 1) * 9) + (node.kind === 'shared' ? 10 : 0)"
+              >
+                @for (line of node.lines; track line + '-' + $index) {
+                  <tspan [attr.x]="node.x + node.width / 2" [attr.dy]="$index === 0 ? 0 : 18">{{ line }}</tspan>
+                }
+              </text>
+            </g>
+          }
+        </svg>
+      </div>
+    } @else {
+      <p class="diagram__empty">
+        Add controllers and controlled processes in Step 3.1 to render the control-structure sketch.
+      </p>
+    }
+    <p class="note">
+      Treat the sketch as the minimum viable hierarchical control structure: control actions flow downward, feedback flows upward, and optional elements should only be added when they materially improve the later UCA and loss-scenario analysis.
+    </p>
+  </section>
+
+  @if (isBpmnModelModalOpen()) {
+    <div class="modal-backdrop" (click)="closeBpmnModelModal()">
+      <div class="modal modal--bpmn" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="modal__header">
+          <h4>BPMN model</h4>
+          <button type="button" class="modal__close" (click)="closeBpmnModelModal()">×</button>
+        </header>
+        <img class="bpmn-model-image" src="/assets/control-structure-bpmn.png" alt="BPMN model for Step 3 control structure" />
+        <div class="modal__actions">
+          <a class="button button--secondary" href="/#resafety-timeline" target="_blank" rel="noopener noreferrer">
+            More details
+          </a>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (isStepThreeAiModalOpen()) {
+    <div class="modal-backdrop" (click)="closeStepThreeAiModal()">
+      <div class="modal modal--ai" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="step-three-ai-modal-title">
+        <header class="modal__header">
+          <h4 id="step-three-ai-modal-title">Generate Step 3 with AI</h4>
+          <button type="button" class="modal__close" [disabled]="isGeneratingStepThreeAi()" (click)="closeStepThreeAiModal()">×</button>
+        </header>
+
+        <form class="grid" [formGroup]="stepThreeAiConfigForm" (ngSubmit)="submitStepThreeAiRequest()">
+          <div class="field field--full">
+            <span>Controller source strategy</span>
+            <div class="checkbox-grid checkbox-grid--modal">
+              <label class="checkbox-card">
+                <input
+                  type="checkbox"
+                  [checked]="!!stepThreeAiConfigForm.controls.allowNewControllers.value"
+                  [disabled]="isGeneratingStepThreeAi()"
+                  (change)="setStepThreeAiControllerMode('allow-new', $any($event.target).checked)"
+                />
+                <div>
+                  <strong>Let the AI suggest new systemComponent controllers</strong>
+                  <small>New controllers may be proposed and then confirmed into Step 1.1.5 before Step 3 applies them.</small>
+                </div>
+              </label>
+
+              <label class="checkbox-card">
+                <input
+                  type="checkbox"
+                  [checked]="!!stepThreeAiConfigForm.controls.existingControllersOnly.value"
+                  [disabled]="isGeneratingStepThreeAi()"
+                  (change)="setStepThreeAiControllerMode('existing-only', $any($event.target).checked)"
+                />
+                <div>
+                  <strong>Use only controllers already returned by Step 1</strong>
+                  <small>Any AI row that depends on a controller outside Step 1.1.5 will be ignored.</small>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>Minimum number of control actions to add</span>
+            <input type="number" min="1" formControlName="minControlActions" />
+          </label>
+
+          <label class="field">
+            <span>Maximum number of control actions to add</span>
+            <input type="number" min="1" formControlName="maxControlActions" />
+          </label>
+
+          <label class="field">
+            <span>Minimum number of optional elements to add</span>
+            <input type="number" min="0" formControlName="minOptionalElements" />
+          </label>
+
+          <label class="field">
+            <span>Maximum number of optional elements to add</span>
+            <input type="number" min="0" formControlName="maxOptionalElements" />
+          </label>
+
+          <label class="field field--full">
+            <span>Additional directives</span>
+            <textarea
+              rows="5"
+              formControlName="promptInstructions"
+              placeholder="Describe any extra constraints, preferred controller/process relationships, or domain-specific guidance for the Step 3 prompt."
+            ></textarea>
+          </label>
+
+          @if (stepThreeAiConfigError()) {
+            <div class="save-feedback save-feedback--error field--full">
+              {{ stepThreeAiConfigError() }}
+            </div>
+          }
+
+          <div class="ai-modal__actions field--full">
+            <button type="button" class="button button--secondary" [disabled]="isGeneratingStepThreeAi()" (click)="closeStepThreeAiModal()">
+              Cancel
+            </button>
+            <button type="submit" class="button button--ai" [disabled]="isGeneratingStepThreeAi()">
+              <span class="button__icon" aria-hidden="true">
+                @if (isGeneratingStepThreeAi()) {
+                  <span class="button__spinner"></span>
+                } @else {
+                  <span class="ai-robot-icon" aria-hidden="true"></span>
+                }
+              </span>
+              <span>{{ isGeneratingStepThreeAi() ? 'Running...' : 'Continue' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (isControllerApprovalModalOpen()) {
+    <div class="modal-backdrop" (click)="closeControllerApprovalModal()">
+      <div class="modal modal--ai" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="step-three-controller-approval-title">
+        <header class="modal__header">
+          <h4 id="step-three-controller-approval-title">Add new Step 1.1.5 system components?</h4>
+          <button type="button" class="modal__close" [disabled]="isSavingPendingControllers()" (click)="closeControllerApprovalModal()">×</button>
+        </header>
+
+        <div class="modal__content">
+          <p class="modal__message">
+            The AI proposed controllers that are not defined in Step 1.1.5 System components. Select which ones should be added to Step 1 before their related Step 3 rows are applied.
+          </p>
+
+          <div class="controller-approval-list" role="group" aria-label="New system components proposed by AI">
+            @for (item of pendingControllerApprovalOptions(); track item.name) {
+              <label class="checkbox-card controller-approval-item">
+                <input
+                  type="checkbox"
+                  [checked]="item.selected"
+                  [disabled]="isSavingPendingControllers()"
+                  (change)="togglePendingController(item.name, $any($event.target).checked)"
+                />
+                <div>
+                  <strong>{{ item.name }}</strong>
+                  <small>Add this controller to Step 1.1.5 if selected.</small>
+                </div>
+              </label>
+            }
+          </div>
+
+          <p class="modal__message modal__message--muted">
+            Control actions or optional elements that depend on an unselected controller will be ignored. Existing Step 3 entities, control actions, and optional elements are preserved.
+          </p>
+        </div>
+
+        <div class="ai-modal__actions">
+          <button type="button" class="button button--secondary" [disabled]="isSavingPendingControllers()" (click)="closeControllerApprovalModal()">
+            Cancel
+          </button>
+          <button type="button" class="button" [disabled]="isSavingPendingControllers()" (click)="applyPendingControllerSelection()">
+            {{ isSavingPendingControllers() ? 'Updating Step 1...' : 'Apply selection' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <div class="page-actions page-actions--bottom">
+    <button type="button" class="button button--secondary" [disabled]="isSavingStepThree()" (click)="saveStepThree()">
+      {{ isSavingStepThree() ? 'Saving...' : 'Save' }}
+    </button>
+    <button type="button" class="button" [disabled]="isSavingStepThree()" (click)="saveStepThree(true)">
+      {{ isSavingStepThree() ? 'Saving...' : 'Save and Continue' }}
+    </button>
+  </div>
+</section>

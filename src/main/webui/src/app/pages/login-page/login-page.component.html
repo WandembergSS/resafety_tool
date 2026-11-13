@@ -1,0 +1,56 @@
+<section class="login">
+  <div class="login__panel login__panel--brand">
+    <div class="brand">
+      <h1>{{ appTitle }}</h1>
+      <p>
+        Unified portal for driving the ReSafety workflow. Organize analyses, maintain traceability,
+        and generate safety artefacts with collaborative support.
+      </p>
+      <ul>
+        <li>Guided ReSafety flow with AI assistance.</li>
+        <li>iStar4Safety models linked across STPA steps.</li>
+        <li>Safety requirements generation.</li>
+      </ul>
+    </div>
+  </div>
+
+  <form class="login__panel login__panel--form" [formGroup]="loginForm" (ngSubmit)="signIn()">
+    <header>
+      <h2>Sign in to RESafety Tool</h2>
+    </header>
+
+    <label class="field">
+      <span>Username</span>
+      <input type="text" formControlName="username" placeholder="your.username" autocomplete="username" />
+      @if (loginForm.controls.username.invalid && loginForm.controls.username.touched) {
+        <small class="hint">Enter your username.</small>
+      }
+    </label>
+
+    <label class="field">
+      <span>Password</span>
+      <input type="password" formControlName="password" placeholder="Your password" autocomplete="current-password" />
+      @if (loginForm.controls.password.invalid && loginForm.controls.password.touched) {
+        <small class="hint">Password must contain at least 6 characters.</small>
+      }
+    </label>
+
+    <button type="submit" class="primary" [disabled]="status() === 'submitting'">
+      @if (status() === 'submitting') {
+        <span>Validating...</span>
+      } @else {
+        <span>Sign in</span>
+      }
+    </button>
+
+    @if (errorMessage()) {
+      <p class="error">{{ errorMessage() }}</p>
+    }
+
+    @if (status() === 'success') {
+      <p class="success">Login successful. Redirecting to the dashboard...</p>
+    }
+
+    <p class="support">Need access? Contact the RESafety Tool administrator.</p>
+  </form>
+</section>

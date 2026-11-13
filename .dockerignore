@@ -1,0 +1,33 @@
+# The root Dockerfile is a multi-stage build that compiles from source, so the
+# build context must include the sources. Exclude only heavy/regenerated dirs.
+# NOTE: target/ is intentionally NOT excluded so the legacy pre-built
+# src/main/docker/Dockerfile.* images keep working.
+
+# Node dependencies & Angular caches — Quinoa reinstalls/rebuilds these in the image
+**/node_modules/
+**/.angular/
+src/main/webui/dist/
+src/main/webui/.tmp_pdf_preview/
+
+# Version control & CI
+.git/
+.gitignore
+.github/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+.factorypath
+
+# OS noise
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+**/npm-debug.log*
+**/yarn-error.log*
+
+# Local environment / secrets
+.env

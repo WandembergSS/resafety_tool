@@ -1,0 +1,80 @@
+<div class="shell">
+  <header class="shell__header">
+    @if (showWorkflowNav()) {
+      <button type="button" class="shell__menu" (click)="toggleNav()" aria-label="Toggle navigation">
+        ☰
+      </button>
+    }
+    <div class="shell__title">
+      <a class="shell__title-link" routerLink="/" aria-label="Go to Home Dashboard">
+        <h1>{{ appTitle }}</h1>
+        <p class="shell__subtitle">{{ appSubtitle }}</p>
+      </a>
+    </div>
+    @if (isAuthenticated()) {
+      <div class="shell__actions">
+        <a class="shell__help" routerLink="/help" aria-label="Open help and guide">Help</a>
+        <button type="button" class="shell__logout" (click)="logout()">Logout</button>
+      </div>
+    }
+  </header>
+
+  <div
+    class="shell__body"
+    [class.shell__body--no-nav]="!showWorkflowNav()"
+    [class.shell__body--home]="isAuthenticated() && isDashboardRoute()"
+  >
+    @if (showWorkflowNav()) {
+      <aside class="shell__nav" [class.shell__nav--open]="navOpen()">
+        <nav>
+          @for (section of navSections; track section.heading) {
+            <p class="shell__nav-label">{{ section.heading }}</p>
+            @for (link of section.links; track link.path) {
+              <a
+                [routerLink]="isNavLinkBlocked(link.path) ? null : link.path"
+                queryParamsHandling="preserve"
+                [class.nav-link--blocked]="isNavLinkBlocked(link.path)"
+                [attr.aria-disabled]="isNavLinkBlocked(link.path)"
+                [attr.data-nav-path]="link.path"
+                [attr.title]="getNavLinkTitle(link.description, link.path)"
+                (click)="handleNavLinkClick($event, link.path)"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: link.path === '/' }"
+              >
+                <span class="nav__label">{{ link.label }}</span>
+                <span class="nav__description">{{ link.description }}</span>
+              </a>
+            }
+          }
+        </nav>
+      </aside>
+    }
+
+    <main class="shell__content" (click)="closeNav()">
+      @if (isNavigating()) {
+        <section class="route-skeleton" aria-hidden="true">
+          <div class="skeleton skeleton--title"></div>
+          <div class="skeleton skeleton--line"></div>
+          <div class="skeleton skeleton--line skeleton--line-short"></div>
+          <div class="route-skeleton__grid">
+            <div class="skeleton skeleton--card"></div>
+            <div class="skeleton skeleton--card"></div>
+            <div class="skeleton skeleton--card"></div>
+          </div>
+        </section>
+      }
+
+      <div class="shell__router" [class.shell__router--loading]="isNavigating()">
+        <router-outlet />
+      </div>
+    </main>
+  </div>
+
+  <footer class="shell__footer">
+    <div class="shell__footer-grid">
+      <div>
+        <p class="footer__year">&copy; 2026 RESafety Tool - All rights reserved</p>
+      </div>
+    </div>
+  </footer>
+</div>

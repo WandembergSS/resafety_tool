@@ -1,0 +1,649 @@
+package com.autoresafety.api.dto.project;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import com.autoresafety.domain.ProjectStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+
+/**
+ * Full "project document" DTO that matches the JSON shape provided by the client.
+ * Intended for future GET/POST usage.
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProjectDocumentDto {
+        private ProjectDto project;
+        private Step1ScopeDto step1Scope;
+        private Step2IstarDto step2Istar;
+        private Step3ControlStructureDto step3ControlStructure;
+        private Step4UcasDto step4Ucas;
+        private Step5ControllerConstraintsDto step5ControllerConstraints;
+        private Step5InformationDto step5Information;
+        private Step6LossScenariosDto step6LossScenarios;
+        private Step7ModelUpdateDto step7ModelUpdate;
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class ProjectDto {
+                @Positive
+                private Long id;
+
+                @NotBlank
+                private String name;
+
+                private String domain;
+
+                private String owner;
+
+                private String description;
+
+                private ProjectStatus status;
+
+                @PositiveOrZero
+                private Integer currentStep;
+
+                private Instant createdAt;
+                private Instant updatedAt;
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step1ScopeDto {
+                private String lastUpdatedBy;
+                private GeneralSummaryDto generalSummary;
+                private String objectives;
+                private List<ResourceDto> resources;
+                private List<SystemComponentDto> systemComponents;
+                private List<AccidentDto> accidents;
+                private List<HazardDto> hazards;
+                private List<SafetyConstraintDto> safetyConstraints;
+                private List<ResponsibilityDto> responsibilities;
+                private List<ArtefactDto> artefacts;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class GeneralSummaryDto {
+                        private String assumptions;
+
+                        private String systemDefinition;
+
+                        private String systemBoundary;
+
+                        private String outOfScope;
+                }
+
+
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ResourceDto {
+                        @Positive
+                        private Long id;
+
+                        private String name;
+
+                        private String category;
+
+                        private String reference;
+
+                        private SourceType sourceType;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class SystemComponentDto {
+                        @Positive
+                        private Long id;
+
+                        private String name;
+
+                        private String description;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class AccidentDto {
+                        @Positive
+                        private Long id;
+
+                        private String code;
+
+                        private String description;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class HazardDto {
+                        @Positive
+                        private Long id;
+
+                        private String code;
+
+                        private String description;
+
+                        private List<String> linkedAccidents;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class SafetyConstraintDto {
+                        @Positive
+                        private Long id;
+
+                        private String code;
+
+                        private String statement;
+
+                        private List<String> linkedHazards;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ResponsibilityDto {
+                        @Positive
+                        private Long id;
+
+                        private String component;
+
+                        private String responsibility;
+
+                        private List<String> linkedConstraints;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ArtefactDto {
+                        @Positive
+                        private Long id;
+
+                        private String name;
+
+                        private String purpose;
+
+                        private String reference;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step2IstarDto {
+                private String modelName;
+                private List<ActorDto> actors;
+                private List<DependencyDto> dependencies;
+                private List<GoalLinkDto> goalLinks;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ActorDto {
+                        private String id;
+
+                        private String name;
+
+                        private String type;
+                        private Double x;
+                        private Double y;
+                        private List<String> isA;
+                        private List<String> participatesIn;
+                        private List<IntentionalElementDto> intentionalElements;
+                        private InternalLinksDto internalLinks;
+                        private List<String> responsibilities;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class IntentionalElementDto {
+                        private String id;
+                        private String name;
+                        private String type;
+                        private Double x;
+                        private Double y;
+                        private List<String> refinedBy;
+                        private List<String> qualifies;
+                        private String accidentLevel;
+                        private String safetyGoalKind;
+                        private List<String> obstructs;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class InternalLinksDto {
+                        private List<Object> refinements;
+                        private List<Object> contributions;
+                        private List<Object> neededBy;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class DependencyDto {
+                        private String id;
+                        private String depender;
+                        private String dependerElement;
+                        private Double x;
+                        private Double y;
+                        private DependumDto dependum;
+                        private String dependee;
+                        private String dependeeElement;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class DependumDto {
+                        private String id;
+                        private String name;
+                        private String type;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class GoalLinkDto {
+                        @Positive
+                        private Long id;
+
+                        private String fromActor;
+
+                        private String goal;
+
+                        private String linkType;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step3ControlStructureDto {
+                private List<ControlActionDto> controlActions;
+                private List<FeedbackLoopDto> feedbackLoops;
+                private List<OptionalElementDto> optionalElements;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ControlActionDto {
+                        @Positive
+                        private Long id;
+
+                        private String controller;
+
+                        private String action;
+
+                        private String controlledProcess;
+
+                        private String feedback;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class FeedbackLoopDto {
+                        @Positive
+                        private Long id;
+
+                        private String source;
+
+                        private String destination;
+
+                        private String signal;
+
+                        private String latency;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class OptionalElementDto {
+                        private String id;
+
+                        private String type;
+
+                        private String name;
+
+                        private String sourceKind;
+
+                        private String sourceEntityId;
+
+                        private String sourceExternalId;
+
+                        private String destinationKind;
+
+                        private String destinationEntityId;
+
+                        private String destinationExternalId;
+
+                        private String responsibilityId;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step4UcasDto {
+                private List<UcaDto> ucas;
+                private List<HazardousConditionDto> hazardousConditions;
+                private List<ControllerConstraintDto> controllerConstraints;
+
+                @JsonProperty("unsafeControlActions")
+                public List<UcaDto> getUnsafeControlActions() {
+                        return ucas;
+                }
+
+                @JsonProperty("unsafeControlActions")
+                public void setUnsafeControlActions(List<UcaDto> unsafeControlActions) {
+                        this.ucas = unsafeControlActions;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class UcaDto {
+                        @Positive
+                        private Long id;
+
+                        private String ref;
+
+                        private String controlActionRef;
+
+                        private String sourceActor;
+
+                        private String targetActor;
+
+                        private String controller;
+
+                        private String controlAction;
+
+                        private String controlledProcess;
+
+                        private String hazard;
+
+                        private String category;
+
+                        private String context;
+
+                        private String consequence;
+
+                        private String rationale;
+
+                        private List<String> hazardRefs;
+
+                        private String responsibilityId;
+
+                        private String safetyConstraintId;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class HazardousConditionDto {
+                        @Positive
+                        private Long id;
+
+                        private String ref;
+
+                        private String description;
+
+                        private String context;
+
+                        private String consequence;
+
+                        private List<String> hazardRefs;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ControllerConstraintDto {
+                        @Positive
+                        private Long id;
+
+                        private String sourceUcaHc;
+
+                        private String constraintId;
+
+                        private String constraintStatement;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step5ControllerConstraintsDto {
+                private List<ConstraintDto> constraints;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ConstraintDto {
+                        @Positive
+                        private Long id;
+
+                        private String ucaRef;
+
+                        private String constraint;
+
+                        private String enforcementMechanism;
+
+                        private String status;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step5InformationDto {
+                private List<LossScenarioDto> lossScenarios;
+                private List<SafetyRequirementDto> safetyRequirements;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class LossScenarioDto {
+                        private String id;
+
+                        private String description;
+
+                        private List<String> associatedUnsafeBehaviorIds;
+
+                        private String sourceRationale;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class SafetyRequirementDto {
+                        private String id;
+
+                        private String description;
+
+                        private List<String> addressedLossScenarioIds;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step6LossScenariosDto {
+                private List<LossScenarioDto> lossScenarios;
+                private List<SafetyRequirementDto> safetyRequirements;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class LossScenarioDto {
+                        @Positive
+                        private Long id;
+
+                        private String uca;
+
+                        private String hazard;
+
+                        private String outcome;
+
+                        private String severity;
+                            private List<String> mitigations;
+
+                        private String status;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class SafetyRequirementDto {
+                        @Positive
+                        private Long id;
+
+                        private String title;
+
+                        @Positive
+                        private Long linkedScenario;
+
+                        private String category;
+
+                        private String owner;
+
+                        private LocalDate dueDate;
+
+                        private String status;
+                }
+        }
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class Step7ModelUpdateDto {
+                @Builder.Default
+                private UpdatedStepsDto updatedSteps = UpdatedStepsDto.builder().build();
+                private List<ModelChangeDto> modelChanges;
+                private List<ValidationTaskDto> validationTasks;
+                private List<IntegrationNoteDto> integrationNotes;
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class UpdatedStepsDto {
+                        private boolean step1;
+                        private boolean step2;
+                        private boolean step3;
+                        private boolean step4;
+                        private boolean step5;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ModelChangeDto {
+                        @Positive
+                        private Long id;
+
+                        private String area;
+
+                        private String change;
+
+                        private String driver;
+
+                        private String impact;
+
+                        private String status;
+                            private List<String> evidence;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class ValidationTaskDto {
+                        @Positive
+                        private Long id;
+
+                        private String name;
+
+                        private String owner;
+
+                        private String dueDate;
+
+                        private String channel;
+
+                        private String status;
+                }
+
+                @Data
+                @Builder
+                @NoArgsConstructor
+                @AllArgsConstructor
+                public static class IntegrationNoteDto {
+                        @Positive
+                        private Long id;
+
+                        private String summary;
+
+                        private String createdOn;
+
+                        private String author;
+                            private List<String> actionItems;
+                }
+        }
+}

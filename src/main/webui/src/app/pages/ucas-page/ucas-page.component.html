@@ -1,0 +1,367 @@
+<section class="page">
+  <header class="page__header">
+    <div class="page__header-copy">
+      <p class="step">Step 4</p>
+      <div class="page__title-row">
+        <h2>Identify Unsafe Control Actions (UCAs)</h2>
+        <div class="page__header-actions">
+          <button type="button" class="button button--ai" [disabled]="isGeneratingStepFourAi()" (click)="openStepFourAiModal()" aria-label="Generate with AI">
+            <span class="button__icon" aria-hidden="true">
+              @if (isGeneratingStepFourAi()) {
+                <span class="button__spinner"></span>
+              } @else {
+                <span class="ai-robot-icon" aria-hidden="true"></span>
+              }
+            </span>
+            <span>{{ isGeneratingStepFourAi() ? 'Generating...' : 'Generate with AI' }}</span>
+          </button>
+          <button type="button" class="button button--secondary" (click)="openBpmnModelModal()">Bpmn and more details</button>
+        </div>
+      </div>
+      <p>
+        Systematically evaluate each control action from the STPA control structure across the four unsafe contexts. The
+        goal of Step 4 is to turn a controller-action pair into a traceable UCA statement that clearly names the hazard,
+        the unsafe context, the originating responsibility, and the safety constraint that governs it.
+      </p>
+    </div>
+  </header>
+
+  <div class="page-actions">
+    <button type="button" class="button button--secondary" [disabled]="isSavingStepFour()" (click)="saveStepFour()">
+      {{ isSavingStepFour() ? 'Saving...' : 'Save' }}
+    </button>
+    <button type="button" class="button" [disabled]="isSavingStepFour()" (click)="saveStepFour(true)">
+      {{ isSavingStepFour() ? 'Saving...' : 'Save and Continue' }}
+    </button>
+  </div>
+
+  @if (stepFourSaveMessage()) {
+    <div class="save-feedback save-feedback--success">
+      {{ stepFourSaveMessage() }}
+    </div>
+  }
+
+  @if (stepFourSaveError()) {
+    <div class="save-feedback save-feedback--error">
+      {{ stepFourSaveError() }}
+    </div>
+  }
+
+  <section class="overview-strip" aria-label="Unsafe control action summary">
+    <article class="overview-card overview-card--primary">
+      <span class="overview-card__label">Recorded UCAs</span>
+      <strong>{{ totalUcas() }}</strong>
+      <p>Total unsafe control actions documented for Step 4.</p>
+    </article>
+
+    <article class="overview-card">
+      <span class="overview-card__label">Timing or duration issues</span>
+      <strong>{{ categoryCount('Incorrect timing') + categoryCount('Incorrect duration') }}</strong>
+      <p>Cases driven by ordering, latency, or unsafe action duration.</p>
+    </article>
+    <article class="overview-card">
+      <span class="overview-card__label">Hazardous conditions</span>
+      <strong>{{ totalHazardousConditions() }}</strong>
+      <p>Responsibilities or hazards that are not fully covered by the identified UCAs.</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <div class="card__heading">
+      <div>
+        <h3>Unsafe control action registered</h3>
+        <button type="button" class="button button--secondary card__heading-button" (click)="openNewUcaModal()">New UCA</button>
+      </div>
+      <label class="field uca-register-filter">
+        <select [value]="selectedRegisterCategory()" (change)="setRegisterCategoryFilter($any($event.target).value)">
+          <option value="all">All categories</option>
+          <option value="Not provided">Not provided</option>
+          <option value="Provided">Provided</option>
+          <option value="Incorrect timing">Incorrect timing</option>
+          <option value="Incorrect duration">Incorrect duration</option>
+        </select>
+      </label>
+    </div>
+    <div class="uca-list">
+      @for (uca of filteredRegisteredUcas(); track uca.id) {
+        <article class="uca">
+          <header>
+            <div>
+              <span class="uca__ref">{{ uca.ref }}</span>
+              <div class="uca__meta">
+                <p><strong>Controller name:</strong> {{ uca.controller || uca.sourceActor }}</p>
+                <p><strong>Control action:</strong> {{ uca.controlActionRef }} · {{ uca.controlAction }}</p>
+              </div>
+            </div>
+            <div class="uca__actions">
+              <span class="badge badge--{{ categoryClass(uca.category) }}">{{ uca.category }}</span>
+              <button
+                type="button"
+                class="icon-action"
+                (click)="openEditUca(uca)"
+                aria-label="Edit unsafe control action"
+                title="Edit"
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                class="icon-action icon-action--danger"
+                (click)="removeUca(uca.id)"
+                aria-label="Delete unsafe control action"
+                title="Delete"
+              >
+                🗑
+              </button>
+            </div>
+          </header>
+          <p class="uca__hazard">Hazard traceability: {{ uca.hazard.join(', ') }}</p>
+          <div class="uca__detail">
+            <strong>Responsibility</strong>
+            <p>{{ uca.responsibility }}</p>
+          </div>
+          <div class="uca__detail">
+            <strong>Safety Constraint</strong>
+            <p>{{ uca.safetyConstraint }}</p>
+          </div>
+          <div class="uca__detail">
+            <strong>Unsafe context</strong>
+            <p>{{ uca.context }}</p>
+          </div>
+          <div class="uca__detail">
+            <strong>Potential consequence</strong>
+            <p>{{ uca.consequence }}</p>
+          </div>
+        </article>
+      }
+
+      @if (filteredRegisteredUcas().length === 0) {
+        <p class="uca-list__empty">No unsafe control actions match the selected category.</p>
+      }
+    </div>
+  </section>
+
+  
+
+  <app-controller-constraints-page
+    [embedded]="true"
+    [analysisSources]="constraintSources()"
+    [initialConstraints]="controllerConstraints()"
+    [initialNextConstraintId]="nextConstraintIdValue()"
+    (constraintsChange)="onControllerConstraintsChange($event)"
+  />
+
+  <div class="page-actions page-actions--bottom">
+    <button type="button" class="button button--secondary" [disabled]="isSavingStepFour()" (click)="saveStepFour()">
+      {{ isSavingStepFour() ? 'Saving...' : 'Save' }}
+    </button>
+    <button type="button" class="button" [disabled]="isSavingStepFour()" (click)="saveStepFour(true)">
+      {{ isSavingStepFour() ? 'Saving...' : 'Save and Continue' }}
+    </button>
+  </div>
+
+  @if (isUcaModalOpen()) {
+    <div class="modal-backdrop" (click)="closeEditUcaModal()">
+      <div class="modal modal--uca-edit" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="ucaModalTitle()">
+        <header class="modal__header">
+          <h4>{{ ucaModalTitle() }}</h4>
+          <button type="button" class="modal__close" (click)="closeEditUcaModal()">×</button>
+        </header>
+
+        <form class="modal__body form-stack" [formGroup]="editUcaForm" (ngSubmit)="saveEditedUca()">
+          <section class="form-section" [attr.aria-label]="ucaModalTitle()">
+
+            <div class="grid">
+              <label class="field">
+                <span>UCA ID</span>
+                <div class="prefixed-input">
+                  <span class="prefixed-input__prefix">UCA-</span>
+                  <input type="text" formControlName="refCode" placeholder="01" />
+                </div>
+                @if (editUcaForm.controls.refCode.touched && editUcaForm.controls.refCode.hasError('required')) {
+                  <small>Enter the UCA code number.</small>
+                }
+                @if (editUcaForm.controls.refCode.touched && editUcaForm.controls.refCode.hasError('pattern')) {
+                  <small>Use a positive integer only.</small>
+                }
+                @if (editUcaForm.controls.refCode.touched && editUcaForm.controls.refCode.hasError('duplicate')) {
+                  <small>This UCA code already exists. Use a unique code.</small>
+                }
+              </label>
+
+              <label class="field field--full">
+                <span>Select control action</span>
+                <select formControlName="controlActionRef" (change)="onEditControlActionSelected($any($event.target).value)">
+                  <option value="">Select a control action from the Step 3 catalogue</option>
+                  @for (item of controlActionCatalog(); track item.ref) {
+                    <option [value]="item.ref">{{ item.ref }} · {{ item.controlAction }}</option>
+                  }
+                </select>
+              </label>
+
+              <div class="summary-grid field--full">
+                <article class="summary-card">
+                  <span>Controller</span>
+                  <strong>{{ editUcaForm.controls.controller.value || 'Select a control action' }}</strong>
+                </article>
+                <article class="summary-card">
+                  <span>Controlled process</span>
+                  <strong>{{ editUcaForm.controls.controlledProcess.value || 'Select a control action' }}</strong>
+                </article>
+              </div>
+
+              <label class="field">
+                <span>UCA category</span>
+                <select formControlName="category">
+                  <option value="Not provided">Not providing (Step 4.2)</option>
+                  <option value="Provided">Providing (Step 4.3)</option>
+                  <option value="Incorrect timing">Timing / order (Step 4.4)</option>
+                  <option value="Incorrect duration">Duration (Step 4.5)</option>
+                </select>
+              </label>
+
+              <div class="field field--full">
+                <span>Associated system-level hazard(s)</span>
+                <div class="checkbox-list" role="group" aria-label="Associated system-level hazards">
+                  @for (hazard of hazardCatalog(); track hazard) {
+                    <label class="checkbox-list__item">
+                      <input
+                        type="checkbox"
+                        [checked]="isEditHazardSelected(hazard)"
+                        (change)="onEditHazardSelectionChange(hazard, $any($event.target).checked)"
+                      />
+                      <span>{{ hazard }}</span>
+                    </label>
+                  }
+                </div>
+                <small>Options are loaded from the Step 1.2.2 system-level hazards for this project.</small>
+              </div>
+
+              <label class="field field--full">
+                <span>Define new system-level hazard</span>
+                <input type="text" formControlName="additionalHazard" placeholder="Add a new hazard when no existing option fits the UCA" />
+              </label>
+
+              <label class="field field--full">
+                <span>Associated responsibility</span>
+                <select formControlName="responsibility" (change)="onEditResponsibilitySelected($any($event.target).value)">
+                  <option value="">Select a responsibility from Step 1.2.4</option>
+                  @for (item of editResponsibilityOptions(); track item.responsibility) {
+                    <option [value]="item.responsibility">{{ item.responsibility }}</option>
+                  }
+                </select>
+                <small>Options are loaded from the Step 1.2.4 responsibilities definition for this project.</small>
+              </label>
+
+              <label class="field field--full">
+                <span>Associated Safety Constraint (SC)</span>
+                <input type="text" formControlName="safetyConstraint" readonly />
+              </label>
+
+              <label class="field field--full">
+                <span>Unsafe context</span>
+                <textarea rows="3" formControlName="context"></textarea>
+              </label>
+
+              <label class="field field--full">
+                <span>Potential consequence</span>
+                <textarea rows="3" formControlName="consequence"></textarea>
+              </label>
+
+            </div>
+          </section>
+
+          <div class="page-actions modal__actions">
+            <button type="button" class="button button--secondary" (click)="closeEditUcaModal()">Cancel</button>
+            <button type="submit" class="button" [disabled]="editUcaForm.invalid">{{ ucaModalSubmitLabel() }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (isStepFourAiModalOpen()) {
+    <div class="modal-backdrop" (click)="closeStepFourAiModal()">
+      <div class="modal modal--ai" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="modal__header">
+          <h4>Generate Step 4 with AI</h4>
+          <button type="button" class="modal__close" (click)="closeStepFourAiModal()" [disabled]="isGeneratingStepFourAi()">×</button>
+        </header>
+        <p class="modal__intro">
+          Configure how many new unsafe control actions, hazardous conditions, and controller constraints the AI should
+          propose. Existing entries are always preserved &mdash; the assistant only adds new items.
+        </p>
+        <form class="grid" [formGroup]="stepFourAiConfigForm" (ngSubmit)="submitStepFourAiRequest()">
+          <div class="field">
+            <label for="stepFourMinUcas">Minimum new UCAs</label>
+            <input id="stepFourMinUcas" type="number" min="1" formControlName="minUcas" />
+          </div>
+          <div class="field">
+            <label for="stepFourMaxUcas">Maximum new UCAs</label>
+            <input id="stepFourMaxUcas" type="number" min="1" formControlName="maxUcas" />
+          </div>
+          <div class="field">
+            <label for="stepFourMinHc">Minimum new hazardous conditions</label>
+            <input id="stepFourMinHc" type="number" min="0" formControlName="minHazardousConditions" />
+          </div>
+          <div class="field">
+            <label for="stepFourMaxHc">Maximum new hazardous conditions</label>
+            <input id="stepFourMaxHc" type="number" min="0" formControlName="maxHazardousConditions" />
+          </div>
+          <div class="field">
+            <label for="stepFourMinConstraints">Minimum new controller constraints</label>
+            <input id="stepFourMinConstraints" type="number" min="0" formControlName="minControllerConstraints" />
+          </div>
+          <div class="field">
+            <label for="stepFourMaxConstraints">Maximum new controller constraints</label>
+            <input id="stepFourMaxConstraints" type="number" min="0" formControlName="maxControllerConstraints" />
+          </div>
+          <div class="field field--full">
+            <label for="stepFourPromptInstructions">Additional instructions (optional)</label>
+            <textarea
+              id="stepFourPromptInstructions"
+              rows="3"
+              formControlName="promptInstructions"
+              placeholder="Focus on timing-related UCAs, emphasise operator handover, etc."
+            ></textarea>
+          </div>
+          @if (stepFourAiConfigError()) {
+            <p class="modal__error field--full">{{ stepFourAiConfigError() }}</p>
+          }
+          <div class="ai-modal__actions field--full">
+            <button type="button" class="button button--secondary" (click)="closeStepFourAiModal()" [disabled]="isGeneratingStepFourAi()">
+              Cancel
+            </button>
+            <button type="submit" class="button button--ai" [disabled]="isGeneratingStepFourAi()">
+              <span class="button__icon" aria-hidden="true">
+                @if (isGeneratingStepFourAi()) {
+                  <span class="button__spinner"></span>
+                } @else {
+                  <span class="ai-robot-icon" aria-hidden="true"></span>
+                }
+              </span>
+              <span>{{ isGeneratingStepFourAi() ? 'Generating...' : 'Generate' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (isBpmnModelModalOpen()) {
+    <div class="modal-backdrop" (click)="closeBpmnModelModal()">
+      <div class="modal modal--bpmn" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <header class="modal__header">
+          <h4>BPMN model</h4>
+          <button type="button" class="modal__close" (click)="closeBpmnModelModal()">×</button>
+        </header>
+        <img class="bpmn-model-image" src="/assets/ucas-bpmn.png" alt="BPMN model for Step 4 unsafe control actions" />
+        <div class="modal__actions">
+          <a class="button button--secondary" href="/#resafety-timeline" target="_blank" rel="noopener noreferrer">
+            More details
+          </a>
+        </div>
+      </div>
+    </div>
+  }
+</section>
